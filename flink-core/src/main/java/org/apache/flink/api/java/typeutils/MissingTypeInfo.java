@@ -33,6 +33,7 @@ public class MissingTypeInfo extends TypeInformation<InvalidTypesException> {
 
     private final String functionName;
     private final InvalidTypesException typeException;
+    private transient volatile String cachedToString;
 
     public MissingTypeInfo(String functionName) {
         this(functionName, new InvalidTypesException("An unknown error occurred."));
@@ -94,12 +95,21 @@ public class MissingTypeInfo extends TypeInformation<InvalidTypesException> {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName()
-                + "<"
-                + functionName
-                + ", "
-                + typeException.getMessage()
-                + ">";
+        String result = cachedToString;
+        if (result == null) {
+            // Intentionally call typeException.getMessage() as in the original implementation
+            // (this will throw NPE exactly as before if typeException is null).
+            String className = getClass().getSimpleName();
+            String message = typeException.getMessage();
+            // Pre-size the StringBuilder to avoid incremental resizing.
+            int estimatedSize = className.length() + 2 + (functionName == null ? 4 : functionName.length())
+                    + 2 + (message == null ? 4 : message.length()) + 1;
+            StringBuilder sb = new StringBuilder(estimatedSize);
+            sb.append(className).append("<").append(functionName).append(", ").append(message).append(">");
+            result = sb.toString();
+            cachedToString = result;
+        }
+        return result;
     }
 
     @Override
