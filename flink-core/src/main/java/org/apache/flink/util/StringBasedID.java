@@ -30,6 +30,7 @@ public class StringBasedID implements Serializable {
 
     /** Uses a String as internal representation. */
     private final String keyString;
+    private transient int cachedHash;
 
     /** Protected constructor to enforce that subclassing. */
     protected StringBasedID(String keyString) {
@@ -50,6 +51,29 @@ public class StringBasedID implements Serializable {
         }
 
         StringBasedID that = (StringBasedID) o;
+
+        // Fast-reference check: same String instance implies equality.
+        if (keyString == that.keyString) {
+            return true;
+        }
+
+        // Use cached hash codes (when available) to quickly rule out inequality.
+        int h1 = this.cachedHash;
+        int h2 = that.cachedHash;
+        if (h1 != 0 || h2 != 0) {
+            if (h1 == 0) {
+                h1 = keyString.hashCode();
+                this.cachedHash = h1;
+            }
+            if (h2 == 0) {
+                h2 = that.keyString.hashCode();
+                that.cachedHash = h2;
+            }
+            if (h1 != h2) {
+                return false;
+            }
+        }
+
         return keyString.equals(that.keyString);
     }
 
