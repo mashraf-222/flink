@@ -41,6 +41,8 @@ public class ShortValueComparator extends TypeComparator<ShortValue> {
     private final ShortValue tempReference = new ShortValue();
 
     private final TypeComparator<?>[] comparators = new TypeComparator[] {this};
+    private static final boolean CACHED_SUPPORTS_NORMALIZED_KEY =
+                NormalizableKey.class.isAssignableFrom(ShortValue.class);
 
     public ShortValueComparator(boolean ascending) {
         this.ascendingComparison = ascending;
@@ -85,7 +87,7 @@ public class ShortValueComparator extends TypeComparator<ShortValue> {
 
     @Override
     public boolean supportsNormalizedKey() {
-        return NormalizableKey.class.isAssignableFrom(ShortValue.class);
+        return CACHED_SUPPORTS_NORMALIZED_KEY;
     }
 
     @Override
