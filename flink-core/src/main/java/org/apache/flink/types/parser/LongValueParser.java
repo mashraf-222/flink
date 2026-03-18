@@ -43,33 +43,41 @@ public class LongValueParser extends FieldParser<LongValue> {
 
         this.result = reusable;
 
-        if (bytes[startPos] == '-') {
+        // Cache locals for performance
+        final byte[] b = bytes;
+        final byte[] del = delimiter;
+        final int delLen = del.length;
+        final int firstDelByte = delLen > 0 ? del[0] : 0;
+
+        if (b[startPos] == '-') {
             neg = true;
             startPos++;
 
             // check for empty field with only the sign
             if (startPos == limit
-                    || (startPos < delimLimit && delimiterNext(bytes, startPos, delimiter))) {
+                    || (startPos < delimLimit && matchesDelimiterAt(b, startPos, del, delLen, firstDelByte))) {
                 setErrorState(ParseErrorState.NUMERIC_VALUE_ORPHAN_SIGN);
                 return -1;
             }
         }
 
-        for (int i = startPos; i < limit; i++) {
-            if (i < delimLimit && delimiterNext(bytes, i, delimiter)) {
+        int i = startPos;
+        while (i < limit) {
+            if (i < delimLimit && matchesDelimiterAt(b, i, del, delLen, firstDelByte)) {
                 if (i == startPos) {
                     setErrorState(ParseErrorState.EMPTY_COLUMN);
                     return -1;
                 }
                 reusable.setValue(neg ? -val : val);
-                return i + delimiter.length;
+                return i + delLen;
             }
-            if (bytes[i] < 48 || bytes[i] > 57) {
+
+            byte ch = b[i];
+            if (ch < 48 || ch > 57) {
                 setErrorState(ParseErrorState.NUMERIC_VALUE_ILLEGAL_CHARACTER);
                 return -1;
             }
-            val *= 10;
-            val += bytes[i] - 48;
+            val = val * 10 + (ch - 48);
 
             // check for overflow / underflow
             if (val < 0) {
@@ -79,8 +87,8 @@ public class LongValueParser extends FieldParser<LongValue> {
 
                     if (i + 1 >= limit) {
                         return limit;
-                    } else if (i + 1 < delimLimit && delimiterNext(bytes, i + 1, delimiter)) {
-                        return i + 1 + delimiter.length;
+                    } else if (i + 1 < delimLimit && matchesDelimiterAt(b, i + 1, del, delLen, firstDelByte)) {
+                        return i + 1 + delLen;
                     } else {
                         setErrorState(ParseErrorState.NUMERIC_VALUE_OVERFLOW_UNDERFLOW);
                         return -1;
@@ -90,6 +98,8 @@ public class LongValueParser extends FieldParser<LongValue> {
                     return -1;
                 }
             }
+
+            i++;
         }
 
         reusable.setValue(neg ? -val : val);
@@ -105,4 +115,21 @@ public class LongValueParser extends FieldParser<LongValue> {
     public LongValue getLastResult() {
         return this.result;
     }
+
+    /**
+     * Fast delimiter match at position pos.
+     * Expects caller to have checked pos < (limit - delLen + 1) semantics.
+     */
+    private static boolean matchesDelimiterAt(byte[] bytes, int pos, byte[] del, int delLen, int firstDelByte) {
+        if (delLen == 1) {
+            return bytes[pos] == firstDelByte;
+        }
+        for (int j = 0; j < delLen; j++) {
+            if (bytes[pos + j] != del[j]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }
