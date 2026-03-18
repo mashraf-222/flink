@@ -60,7 +60,8 @@ public class TextElement implements BlockElement, InlineElement {
 
     /** Wraps a list of {@link InlineElement}s into a single {@link TextElement}. */
     public static InlineElement wrap(InlineElement... elements) {
-        return text(Strings.repeat("%s", elements.length), elements);
+        // Use String.repeat (faster than Guava repeat) and preserve same behavior.
+        return text("%s".repeat(elements.length), elements);
     }
 
     /**
