@@ -89,14 +89,24 @@ public class SqlTimeParser extends FieldParser<Time> {
     public static final Time parseField(byte[] bytes, int startPos, int length, char delimiter) {
         final int limitedLen = nextStringLength(bytes, startPos, length, delimiter);
 
-        if (limitedLen > 0
-                && (Character.isWhitespace(bytes[startPos])
-                        || Character.isWhitespace(bytes[startPos + limitedLen - 1]))) {
-            throw new NumberFormatException(
-                    "There is leading or trailing whitespace in the numeric field.");
+        if (limitedLen > 0) {
+            final int firstIndex = startPos;
+            final int lastIndex = startPos + limitedLen - 1;
+            final byte firstByte = bytes[firstIndex];
+            final byte lastByte = bytes[lastIndex];
+            if (isAsciiWhitespace(firstByte) || isAsciiWhitespace(lastByte)) {
+                throw new NumberFormatException(
+                        "There is leading or trailing whitespace in the numeric field.");
+            }
         }
 
         final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
         return Time.valueOf(str);
     }
+
+    private static boolean isAsciiWhitespace(byte b) {
+        // ASCII whitespace characters: HT(9), LF(10), VT(11), FF(12), CR(13), SP(32)
+        return b == 9 || b == 10 || b == 11 || b == 12 || b == 13 || b == 32;
+    }
+
 }
