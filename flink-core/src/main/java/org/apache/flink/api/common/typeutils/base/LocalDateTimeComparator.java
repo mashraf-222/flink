@@ -64,7 +64,26 @@ public final class LocalDateTimeComparator extends TypeComparator<LocalDateTime>
 
     @Override
     public boolean equalToReference(LocalDateTime candidate) {
-        return candidate.equals(reference);
+        // Fast-path: identical reference
+        if (candidate == reference) {
+            return true;
+        }
+        // Preserve original behavior: calling candidate.equals(reference) would throw NPE if candidate is null.
+        if (candidate == null) {
+            throw new NullPointerException();
+        }
+        final LocalDateTime ref = reference;
+        if (ref == null) {
+            return false;
+        }
+        // Compare primitive fields directly to avoid virtual dispatch and object allocations.
+        return candidate.getYear() == ref.getYear()
+                && candidate.getMonthValue() == ref.getMonthValue()
+                && candidate.getDayOfMonth() == ref.getDayOfMonth()
+                && candidate.getHour() == ref.getHour()
+                && candidate.getMinute() == ref.getMinute()
+                && candidate.getSecond() == ref.getSecond()
+                && candidate.getNano() == ref.getNano();
     }
 
     @Override
