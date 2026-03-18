@@ -44,7 +44,8 @@ public class IntParser extends FieldParser<Integer> {
         long val = 0;
         boolean neg = false;
 
-        final int delimLimit = limit - delimiter.length + 1;
+        final int delimLen = delimiter.length;
+        final int delimLimit = limit - delimLen + 1;
 
         if (bytes[startPos] == '-') {
             neg = true;
@@ -58,21 +59,29 @@ public class IntParser extends FieldParser<Integer> {
             }
         }
 
+        final int zero = 48;
+        final int nine = 57;
+        final byte firstDelByte = delimLen > 0 ? delimiter[0] : 0;
+
         for (int i = startPos; i < limit; i++) {
-            if (i < delimLimit && delimiterNext(bytes, i, delimiter)) {
+            // Only attempt the expensive delimiter check when it's possible:
+            // - either delimiter is zero-length (preserve original behavior and check every time),
+            // - or the current byte matches the first byte of the delimiter.
+            if ( (delimLen == 0 || bytes[i] == firstDelByte) && i < delimLimit && delimiterNext(bytes, i, delimiter)) {
                 if (i == startPos) {
                     setErrorState(ParseErrorState.EMPTY_COLUMN);
                     return -1;
                 }
                 this.result = (int) (neg ? -val : val);
-                return i + delimiter.length;
+                return i + delimLen;
             }
-            if (bytes[i] < 48 || bytes[i] > 57) {
+
+            int b = bytes[i];
+            if (b < zero || b > nine) {
                 setErrorState(ParseErrorState.NUMERIC_VALUE_ILLEGAL_CHARACTER);
                 return -1;
             }
-            val *= 10;
-            val += bytes[i] - 48;
+            val = val * 10 + (b - zero);
 
             if (val > OVERFLOW_BOUND && (!neg || val > UNDERFLOW_BOUND)) {
                 setErrorState(ParseErrorState.NUMERIC_VALUE_OVERFLOW_UNDERFLOW);
