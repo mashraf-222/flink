@@ -58,7 +58,9 @@ public class ShortValueComparator extends TypeComparator<ShortValue> {
 
     @Override
     public boolean equalToReference(ShortValue candidate) {
-        return candidate.equals(this.reference);
+        // Preserve NullPointerException behavior when candidate is null by calling candidate.getValue()
+        final short refVal = this.reference.getValue();
+        return candidate.getValue() == refVal;
     }
 
     @Override
