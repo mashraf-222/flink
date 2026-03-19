@@ -122,7 +122,24 @@ public final class StringUtils {
      */
     public static String showControlCharacters(String str) {
         int len = str.length();
-        StringBuilder sb = new StringBuilder();
+
+        // First pass: count control characters to size the StringBuilder precisely.
+        int controlCount = 0;
+        for (int i = 0; i < len; i++) {
+            char c = str.charAt(i);
+            if (c == '\b' || c == '\t' || c == '\n' || c == '\f' || c == '\r') {
+                controlCount++;
+            }
+        }
+
+        // If there are no control characters, return a new String instance to preserve
+        // the original behavior (original implementation always returned a new String).
+        if (controlCount == 0) {
+            return new String(str);
+        }
+
+        // Allocate enough capacity to avoid resizing: each control char adds one extra char.
+        StringBuilder sb = new StringBuilder(len + controlCount);
 
         for (int i = 0; i < len; i += 1) {
             char c = str.charAt(i);
