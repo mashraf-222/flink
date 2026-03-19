@@ -54,6 +54,7 @@ public class RowFieldExtractorSchema implements SerializationSchema<Row> {
 
     /** The index of the field to extract from the Row. */
     private final int fieldIndex;
+    private static final byte[] EMPTY = new byte[0];
 
     /**
      * Creates a new RowFieldExtractorSchema that extracts the field at the specified index.
@@ -79,25 +80,24 @@ public class RowFieldExtractorSchema implements SerializationSchema<Row> {
     @Override
     public byte[] serialize(@Nullable Row element) {
         if (element == null) {
-            return new byte[0];
+            return EMPTY;
         }
 
+        final int arity = element.getArity();
         checkArgument(
-                fieldIndex < element.getArity(),
+                fieldIndex < arity,
                 "Cannot access field %s in Row with arity %s",
                 fieldIndex,
-                element.getArity());
+                arity);
 
         Object field = element.getField(fieldIndex);
         if (field == null) {
-            return new byte[0];
+            return EMPTY;
         }
 
         if (!(field instanceof byte[])) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "Field at index %s must be of type byte[], but was %s",
-                            fieldIndex, field.getClass().getName()));
+                    "Field at index " + fieldIndex + " must be of type byte[], but was " + field.getClass().getName());
         }
 
         return (byte[]) field;
