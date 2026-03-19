@@ -289,17 +289,12 @@ public final class StringUtils {
      * @return True, if the string is null or blank, false otherwise.
      */
     public static boolean isNullOrWhitespaceOnly(String str) {
-        if (str == null || str.length() == 0) {
+        // Preserve null handling from the original method.
+        if (str == null) {
             return true;
         }
-
-        final int len = str.length();
-        for (int i = 0; i < len; i++) {
-            if (!Character.isWhitespace(str.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
+        // Delegate to the JDK-optimized implementation which checks for blankness (empty or all whitespace).
+        return str.isBlank();
     }
 
     /**
