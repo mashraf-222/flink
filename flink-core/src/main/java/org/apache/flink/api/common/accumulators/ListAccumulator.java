@@ -63,6 +63,10 @@ public class ListAccumulator<T> implements Accumulator<T, ArrayList<T>> {
 
     @Override
     public String toString() {
-        return "List Accumulator " + localValue;
+        // Use a single StringBuilder to avoid the extra temporary String objects
+        // produced by repeated string concatenation in tight loops.
+        StringBuilder sb = new StringBuilder(16 + (localValue == null ? 0 : Math.min(localValue.size() * 8, 1024)));
+        sb.append("List Accumulator ").append(localValue);
+        return sb.toString();
     }
 }
