@@ -130,6 +130,13 @@ public class UnloadableDummyTypeSerializer<T> extends TypeSerializer<T> {
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(getActualBytes());
+        // Inline the array hash computation to avoid the extra method call
+        // and to operate on a local reference for fewer field accesses and bounds checks.
+        final byte[] a = this.actualBytes;
+        int result = 1;
+        for (int i = 0, n = a.length; i < n; i++) {
+            result = 31 * result + a[i];
+        }
+        return result;
     }
 }
