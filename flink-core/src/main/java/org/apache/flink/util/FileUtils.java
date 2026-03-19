@@ -603,13 +603,40 @@ public final class FileUtils {
             return 0L;
         }
 
-        try (Stream<java.nio.file.Path> pathStream = Files.walk(path, options)) {
-            return pathStream
-                    .map(java.nio.file.Path::toFile)
-                    .filter(File::isFile)
-                    .mapToLong(File::length)
-                    .sum();
-        }
+        // Use a FileVisitor to avoid creating File objects and to use BasicFileAttributes,
+        // which provides the size without additional I/O.
+        final long[] total = new long[1];
+
+        // Convert varargs options to an EnumSet for walkFileTree.
+        final EnumSet<FileVisitOption> opts =
+                (options == null || options.length == 0)
+                        ? EnumSet.noneOf(FileVisitOption.class)
+                        : EnumSet.copyOf(Arrays.asList(options));
+
+        Files.walkFileTree(
+                path,
+                opts,
+                Integer.MAX_VALUE,
+                new SimpleFileVisitor<java.nio.file.Path>() {
+                    @Override
+                    public FileVisitResult visitFile(
+                            java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
+                        if (attrs.isRegularFile()) {
+                            total[0] += attrs.size();
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult visitFileFailed(
+                            java.nio.file.Path file, IOException exc) throws IOException {
+                        // Propagate the exception to match Files.walk behavior which throws IOExceptions
+                        // encountered during traversal.
+                        throw exc;
+                    }
+                });
+
+        return total[0];
     }
 
     /**
