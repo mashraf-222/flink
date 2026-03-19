@@ -671,11 +671,15 @@ public final class FileUtils {
      * @return the file name without extension
      */
     public static String stripFileExtension(String fileName) {
-        final String extension =
-                org.apache.flink.shaded.guava33.com.google.common.io.Files.getFileExtension(
-                        fileName);
+        final String extension;
+        int lastDot = fileName.lastIndexOf('.');
+        if (lastDot == -1 || lastDot == fileName.length() - 1) {
+            extension = "";
+        } else {
+            extension = fileName.substring(lastDot + 1);
+        }
         if (!extension.isEmpty()) {
-            return fileName.substring(0, fileName.lastIndexOf(extension) - 1);
+            return fileName.substring(0, lastDot);
         }
         return fileName;
     }
