@@ -329,10 +329,32 @@ public final class StringUtils {
      * @return The string with quoted list of elements
      */
     public static String toQuotedListString(Object[] values) {
-        return Arrays.stream(values)
-                .filter(Objects::nonNull)
-                .map(v -> v.toString().toLowerCase())
-                .collect(Collectors.joining(", ", "\"", "\""));
+        // Accessing values.length here preserves the original behavior of throwing a
+        // NullPointerException when values is null (same as Arrays.stream(values)).
+        int len = values.length;
+
+        // Estimate capacity: smallest possible is 2 for quotes; add a small per-element reserve.
+        StringBuilder sb = new StringBuilder(Math.min(1024, 2 + len * 8));
+        sb.append('"');
+
+        boolean first = true;
+        for (int i = 0; i < len; i++) {
+            Object v = values[i];
+            if (v == null) {
+                continue;
+            }
+            if (!first) {
+                sb.append(", ");
+            } else {
+                first = false;
+            }
+            // Preserve original behavior: use Object.toString() and then toLowerCase() with default locale.
+            String s = v.toString();
+            sb.append(s.toLowerCase());
+        }
+
+        sb.append('"');
+        return sb.toString();
     }
 
     // ------------------------------------------------------------------------
