@@ -33,6 +33,7 @@ public class FieldSet implements Iterable<Integer> {
     public static final FieldSet EMPTY_SET = new FieldSet();
 
     protected final Collection<Integer> collection;
+    private static final float HASHSET_LOAD_FACTOR = 0.75f;
 
     // --------------------------------------------------------------------------------------------
 
@@ -60,16 +61,7 @@ public class FieldSet implements Iterable<Integer> {
      * @param fieldIDs The IDs of the fields.
      */
     public FieldSet(int... fieldIDs) {
-        if (fieldIDs == null || fieldIDs.length == 0) {
-            this.collection = Collections.emptySet();
-        } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * fieldIDs.length);
-            for (int i = 0; i < fieldIDs.length; i++) {
-                set.add(fieldIDs[i]);
-            }
-
-            this.collection = Collections.unmodifiableSet(set);
-        }
+        this.collection = intsToCollection(fieldIDs);
     }
 
     /**
@@ -78,16 +70,8 @@ public class FieldSet implements Iterable<Integer> {
      * @param fieldIDs The IDs of the fields.
      */
     public FieldSet(int[] fieldIDs, boolean marker) {
-        if (fieldIDs == null || fieldIDs.length == 0) {
-            this.collection = Collections.emptySet();
-        } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * fieldIDs.length);
-            for (int i = 0; i < fieldIDs.length; i++) {
-                set.add(fieldIDs[i]);
-            }
-
-            this.collection = Collections.unmodifiableSet(set);
-        }
+        // marker parameter preserved for binary compatibility; behavior identical to the other ctor
+        this.collection = intsToCollection(fieldIDs);
     }
 
     protected FieldSet(Collection<Integer> fields) {
@@ -102,7 +86,8 @@ public class FieldSet implements Iterable<Integer> {
         if (fieldSet.size() == 0) {
             this.collection = Collections.singleton(fieldID);
         } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * (fieldSet.collection.size() + 1));
+            int expectedSize = fieldSet.collection.size() + 1;
+            HashSet<Integer> set = new HashSet<Integer>(capacityForSize(expectedSize));
             set.addAll(fieldSet.collection);
             set.add(fieldID);
             this.collection = Collections.unmodifiableSet(set);
@@ -113,12 +98,13 @@ public class FieldSet implements Iterable<Integer> {
         if (fieldIDs == null || fieldIDs.length == 0) {
             this.collection = fieldSet.collection;
         } else {
+            int expectedSize = fieldSet.collection.size() + fieldIDs.length;
             HashSet<Integer> set =
-                    new HashSet<Integer>(2 * (fieldSet.collection.size() + fieldIDs.length));
+                    new HashSet<Integer>(capacityForSize(expectedSize));
             set.addAll(fieldSet.collection);
 
-            for (int i = 0; i < fieldIDs.length; i++) {
-                set.add(fieldIDs[i]);
+            for (int id : fieldIDs) {
+                set.add(id);
             }
 
             this.collection = Collections.unmodifiableSet(set);
@@ -131,7 +117,8 @@ public class FieldSet implements Iterable<Integer> {
         } else if (fieldSet1.size() == 0) {
             this.collection = fieldSet2.collection;
         } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * (fieldSet1.size() + fieldSet2.size()));
+            int expectedSize = fieldSet1.size() + fieldSet2.size();
+            HashSet<Integer> set = new HashSet<Integer>(capacityForSize(expectedSize));
             set.addAll(fieldSet1.collection);
             set.addAll(fieldSet2.collection);
             this.collection = Collections.unmodifiableSet(set);
@@ -282,4 +269,25 @@ public class FieldSet implements Iterable<Integer> {
     protected String getDescriptionSuffix() {
         return ")";
     }
+
+    private static int capacityForSize(int expectedSize) {
+        // Ensure at least a small capacity to avoid zero or tiny values.
+        // The +1 accounts for integer truncation when dividing by load factor.
+        return Math.max(2, (int) (expectedSize / HASHSET_LOAD_FACTOR) + 1);
+    }
+
+    private static Collection<Integer> intsToCollection(int[] fieldIDs) {
+        if (fieldIDs == null || fieldIDs.length == 0) {
+            return Collections.emptySet();
+        } else if (fieldIDs.length == 1) {
+            return Collections.singleton(Integer.valueOf(fieldIDs[0]));
+        } else {
+            HashSet<Integer> set = new HashSet<Integer>(capacityForSize(fieldIDs.length));
+            for (int id : fieldIDs) {
+                set.add(id);
+            }
+            return Collections.unmodifiableSet(set);
+        }
+    }
+
 }
