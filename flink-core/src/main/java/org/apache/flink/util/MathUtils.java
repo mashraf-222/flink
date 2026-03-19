@@ -56,7 +56,7 @@ public final class MathUtils {
             throw new IllegalArgumentException(
                     "The given value " + value + " is not a power of two.");
         }
-        return 31 - Integer.numberOfLeadingZeros(value);
+        return Integer.numberOfTrailingZeros(value);
     }
 
     /**
