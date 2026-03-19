@@ -33,6 +33,7 @@ public class FieldSet implements Iterable<Integer> {
     public static final FieldSet EMPTY_SET = new FieldSet();
 
     protected final Collection<Integer> collection;
+    private static final int[] EMPTY_INT_ARRAY = new int[0];
 
     // --------------------------------------------------------------------------------------------
 
@@ -63,9 +64,10 @@ public class FieldSet implements Iterable<Integer> {
         if (fieldIDs == null || fieldIDs.length == 0) {
             this.collection = Collections.emptySet();
         } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * fieldIDs.length);
+            int expected = fieldIDs.length;
+            HashSet<Integer> set = new HashSet<Integer>(hashSetCapacityForExpected(expected));
             for (int i = 0; i < fieldIDs.length; i++) {
-                set.add(fieldIDs[i]);
+                set.add(Integer.valueOf(fieldIDs[i]));
             }
 
             this.collection = Collections.unmodifiableSet(set);
@@ -78,16 +80,8 @@ public class FieldSet implements Iterable<Integer> {
      * @param fieldIDs The IDs of the fields.
      */
     public FieldSet(int[] fieldIDs, boolean marker) {
-        if (fieldIDs == null || fieldIDs.length == 0) {
-            this.collection = Collections.emptySet();
-        } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * fieldIDs.length);
-            for (int i = 0; i < fieldIDs.length; i++) {
-                set.add(fieldIDs[i]);
-            }
-
-            this.collection = Collections.unmodifiableSet(set);
-        }
+        // Delegate to the varargs constructor: handles null and zero-length appropriately.
+        this(fieldIDs);
     }
 
     protected FieldSet(Collection<Integer> fields) {
@@ -102,7 +96,8 @@ public class FieldSet implements Iterable<Integer> {
         if (fieldSet.size() == 0) {
             this.collection = Collections.singleton(fieldID);
         } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * (fieldSet.collection.size() + 1));
+            int expected = fieldSet.collection.size() + 1;
+            HashSet<Integer> set = new HashSet<Integer>(hashSetCapacityForExpected(expected));
             set.addAll(fieldSet.collection);
             set.add(fieldID);
             this.collection = Collections.unmodifiableSet(set);
@@ -113,12 +108,13 @@ public class FieldSet implements Iterable<Integer> {
         if (fieldIDs == null || fieldIDs.length == 0) {
             this.collection = fieldSet.collection;
         } else {
+            int expected = fieldSet.collection.size() + fieldIDs.length;
             HashSet<Integer> set =
-                    new HashSet<Integer>(2 * (fieldSet.collection.size() + fieldIDs.length));
+                    new HashSet<Integer>(hashSetCapacityForExpected(expected));
             set.addAll(fieldSet.collection);
 
             for (int i = 0; i < fieldIDs.length; i++) {
-                set.add(fieldIDs[i]);
+                set.add(Integer.valueOf(fieldIDs[i]));
             }
 
             this.collection = Collections.unmodifiableSet(set);
@@ -131,7 +127,8 @@ public class FieldSet implements Iterable<Integer> {
         } else if (fieldSet1.size() == 0) {
             this.collection = fieldSet2.collection;
         } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * (fieldSet1.size() + fieldSet2.size()));
+            int expected = fieldSet1.size() + fieldSet2.size();
+            HashSet<Integer> set = new HashSet<Integer>(hashSetCapacityForExpected(expected));
             set.addAll(fieldSet1.collection);
             set.addAll(fieldSet2.collection);
             this.collection = Collections.unmodifiableSet(set);
@@ -196,10 +193,22 @@ public class FieldSet implements Iterable<Integer> {
      * @return An array of all contained field IDs.
      */
     public int[] toArray() {
-        int[] a = new int[this.collection.size()];
+        int size = this.collection.size();
+        if (size == 0) {
+            return EMPTY_INT_ARRAY;
+        }
+        if (size == 1) {
+            // Fast-path for single-element collections to avoid iterator overhead
+            Iterator<Integer> it = this.collection.iterator();
+            int single = it.next().intValue();
+            return new int[] { single };
+        }
+
+        int[] a = new int[size];
         int i = 0;
-        for (int col : this.collection) {
-            a[i++] = col;
+        Iterator<Integer> it = this.collection.iterator();
+        while (it.hasNext()) {
+            a[i++] = it.next().intValue();
         }
         return a;
     }
@@ -282,4 +291,13 @@ public class FieldSet implements Iterable<Integer> {
     protected String getDescriptionSuffix() {
         return ")";
     }
+
+    /**
+     * Compute initial HashSet capacity to avoid rehashing based on expected number of elements
+     * and default load factor of 0.75.
+     */
+    private static int hashSetCapacityForExpected(int expected) {
+        return (int) (expected / 0.75f) + 1;
+    }
+
 }
