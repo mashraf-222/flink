@@ -33,6 +33,7 @@ public class PluginFileSystemFactory
         implements FileSystemFactory, WrappingProxy<FileSystemFactory> {
     private final FileSystemFactory inner;
     private final ClassLoader loader;
+    private volatile String scheme;
 
     private PluginFileSystemFactory(final FileSystemFactory inner, final ClassLoader loader) {
         this.inner = inner;
@@ -45,7 +46,17 @@ public class PluginFileSystemFactory
 
     @Override
     public String getScheme() {
-        return inner.getScheme();
+        String s = scheme;
+        if (s == null) {
+            synchronized (this) {
+                s = scheme;
+                if (s == null) {
+                    s = inner.getScheme();
+                    scheme = s;
+                }
+            }
+        }
+        return s;
     }
 
     @Override
