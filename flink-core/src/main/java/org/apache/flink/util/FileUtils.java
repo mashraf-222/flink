@@ -659,9 +659,17 @@ public final class FileUtils {
      * @return true if the file has a jar extension, otherwise false
      */
     public static boolean isJarFile(java.nio.file.Path file) {
-        return JAR_FILE_EXTENSION.equals(
-                org.apache.flink.shaded.guava33.com.google.common.io.Files.getFileExtension(
-                        file.toString()));
+        String name = file.toString();
+        int lastDot = name.lastIndexOf('.');
+        if (lastDot == -1 || lastDot == name.length() - 1) {
+            return false;
+        }
+        int extLen = name.length() - lastDot - 1;
+        if (extLen != JAR_FILE_EXTENSION.length()) {
+            return false;
+        }
+        // Compare without allocating a substring.
+        return name.regionMatches(lastDot + 1, JAR_FILE_EXTENSION, 0, extLen);
     }
 
     /**
