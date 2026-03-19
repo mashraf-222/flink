@@ -38,6 +38,7 @@ public class LocatableInputSplit implements InputSplit, java.io.Serializable {
 
     /** The names of the hosts storing the data this input split refers to. */
     private final String[] hostnames;
+    private transient volatile String cachedHostnamesString;
 
     // --------------------------------------------------------------------------------------------
 
@@ -101,6 +102,45 @@ public class LocatableInputSplit implements InputSplit, java.io.Serializable {
 
     @Override
     public String toString() {
-        return "Locatable Split (" + splitNumber + ") at " + Arrays.toString(this.hostnames);
+        String names = cachedHostnamesString;
+        if (names == null) {
+            // Double-checked locking to avoid synchronization overhead on repeated calls
+            synchronized (this) {
+                names = cachedHostnamesString;
+                if (names == null) {
+                    cachedHostnamesString = names = buildArrayString(this.hostnames);
+                }
+            }
+        }
+        // Build the final string using a single StringBuilder to avoid intermediate allocations
+        StringBuilder sb = new StringBuilder(24 + names.length());
+        sb.append("Locatable Split (");
+        sb.append(this.splitNumber);
+        sb.append(") at ");
+        sb.append(names);
+        return sb.toString();
     }
+
+    private static String buildArrayString(String[] arr) {
+        if (arr == null) {
+            return "null";
+        }
+        int len = arr.length;
+        if (len == 0) {
+            return "[]";
+        }
+        // Estimate capacity: 2 for brackets + avg 8 chars per element + 2 per separator
+        StringBuilder sb = new StringBuilder(len * 10 + 2);
+        sb.append('[');
+        for (int i = 0; i < len; i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            String e = arr[i];
+            sb.append(e == null ? "null" : e);
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
 }
