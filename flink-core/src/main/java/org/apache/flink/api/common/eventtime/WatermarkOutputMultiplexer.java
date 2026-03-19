@@ -132,9 +132,11 @@ public class WatermarkOutputMultiplexer {
      * outputs.
      */
     public WatermarkOutput getDeferredOutput(String outputId) {
-        final PartialWatermark outputState = watermarkPerOutputId.get(outputId);
-        Preconditions.checkArgument(
-                outputState != null, "no output registered under id %s", outputId);
+        PartialWatermark outputState = watermarkPerOutputId.get(outputId);
+        if (outputState == null) {
+            // Avoid varargs allocation on the hot path by constructing the exception only when needed.
+            throw new IllegalArgumentException("no output registered under id " + outputId);
+        }
         return new DeferredOutput(outputState);
     }
 
