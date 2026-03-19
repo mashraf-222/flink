@@ -44,6 +44,7 @@ public class MapTypeInfo<K, V> extends TypeInformation<Map<K, V>> {
 
     /* The type information for the values in the map */
     private final TypeInformation<V> valueTypeInfo;
+    private final String toStringCache;
 
     public MapTypeInfo(TypeInformation<K> keyTypeInfo, TypeInformation<V> valueTypeInfo) {
         this.keyTypeInfo =
@@ -51,11 +52,13 @@ public class MapTypeInfo<K, V> extends TypeInformation<Map<K, V>> {
         this.valueTypeInfo =
                 Preconditions.checkNotNull(
                         valueTypeInfo, "The value type information cannot be null.");
+        this.toStringCache = "Map<" + this.keyTypeInfo + ", " + this.valueTypeInfo + ">";
     }
 
     public MapTypeInfo(Class<K> keyClass, Class<V> valueClass) {
         this.keyTypeInfo = of(checkNotNull(keyClass, "The key class cannot be null."));
         this.valueTypeInfo = of(checkNotNull(valueClass, "The value class cannot be null."));
+        this.toStringCache = "Map<" + this.keyTypeInfo + ", " + this.valueTypeInfo + ">";
     }
 
     // ------------------------------------------------------------------------
@@ -117,7 +120,7 @@ public class MapTypeInfo<K, V> extends TypeInformation<Map<K, V>> {
 
     @Override
     public String toString() {
-        return "Map<" + keyTypeInfo + ", " + valueTypeInfo + ">";
+        return toStringCache;
     }
 
     @Override
