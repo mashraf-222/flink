@@ -45,7 +45,8 @@ public class UnloadableDummyTypeSerializer<T> extends TypeSerializer<T> {
     }
 
     public UnloadableDummyTypeSerializer(byte[] actualBytes, @Nullable Throwable originalError) {
-        this.actualBytes = Preconditions.checkNotNull(actualBytes);
+        byte[] checked = Preconditions.checkNotNull(actualBytes);
+        this.actualBytes = checked;
         this.originalError = originalError;
     }
 
