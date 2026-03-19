@@ -75,7 +75,7 @@ public final class MultisetTypeInfo<T> extends MapTypeInfo<T, Integer> {
 
     @Override
     public boolean canEqual(Object obj) {
-        return obj != null && obj.getClass() == getClass();
+        return obj instanceof MultisetTypeInfo;
     }
 
     @SuppressWarnings("unchecked")
