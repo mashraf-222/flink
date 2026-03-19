@@ -92,8 +92,19 @@ public class LocatableInputSplit implements InputSplit, java.io.Serializable {
             return true;
         } else if (obj instanceof LocatableInputSplit) {
             LocatableInputSplit other = (LocatableInputSplit) obj;
-            return other.splitNumber == this.splitNumber
-                    && Arrays.deepEquals(other.hostnames, this.hostnames);
+            // Fast-fail on split number mismatch
+            if (other.splitNumber != this.splitNumber) {
+                return false;
+            }
+            // Local references to avoid repeated field access
+            String[] h1 = this.hostnames;
+            String[] h2 = other.hostnames;
+            // Fast path: identical reference
+            if (h1 == h2) {
+                return true;
+            }
+            // For one-dimensional String arrays, Arrays.equals is cheaper than deepEquals.
+            return Arrays.equals(h1, h2);
         } else {
             return false;
         }
