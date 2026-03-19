@@ -125,7 +125,14 @@ public class UnloadableDummyTypeSerializer<T> extends TypeSerializer<T> {
 
         UnloadableDummyTypeSerializer<?> that = (UnloadableDummyTypeSerializer<?>) o;
 
-        return Arrays.equals(getActualBytes(), that.getActualBytes());
+        byte[] a = this.actualBytes;
+        byte[] b = that.actualBytes;
+
+        if (a == b) {
+            return true;
+        }
+
+        return Arrays.equals(a, b);
     }
 
     @Override
