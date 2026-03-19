@@ -54,6 +54,7 @@ public final class TupleTypeInfo<T extends Tuple> extends TupleTypeInfoBase<T> {
     private static final long serialVersionUID = 1L;
 
     protected final String[] fieldNames;
+    private transient volatile Map<String, Integer> fieldNameToIndex;
 
     @SuppressWarnings("unchecked")
     @PublicEvolving
@@ -85,12 +86,13 @@ public final class TupleTypeInfo<T extends Tuple> extends TupleTypeInfoBase<T> {
     @Override
     @PublicEvolving
     public int getFieldIndex(String fieldName) {
-        for (int i = 0; i < fieldNames.length; i++) {
-            if (fieldNames[i].equals(fieldName)) {
-                return i;
-            }
+        Map<String, Integer> map = fieldNameToIndex;
+        if (map == null) {
+            map = buildFieldNameIndexMap();
+            fieldNameToIndex = map;
         }
-        return -1;
+        Integer idx = map.get(fieldName);
+        return idx != null ? idx.intValue() : -1;
     }
 
     @SuppressWarnings("unchecked")
@@ -272,4 +274,23 @@ public final class TupleTypeInfo<T extends Tuple> extends TupleTypeInfoBase<T> {
         }
         return result;
     }
+
+    /**
+     * Builds a map from field name to its index. This is called lazily and cached.
+     */
+    private Map<String, Integer> buildFieldNameIndexMap() {
+        final int len = fieldNames.length;
+        if (len == 0) {
+            return Collections.emptyMap();
+        }
+
+        // Compute initial capacity to avoid rehashing. Use a small headroom over len.
+        int capacity = Math.max((int) (len / 0.75f) + 1, len);
+        java.util.HashMap<String, Integer> map = new java.util.HashMap<>(capacity);
+        for (int i = 0; i < len; i++) {
+            map.put(fieldNames[i], Integer.valueOf(i));
+        }
+        return map;
+    }
+
 }
