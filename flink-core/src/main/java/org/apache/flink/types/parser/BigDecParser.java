@@ -108,27 +108,34 @@ public class BigDecParser extends FieldParser<BigDecimal> {
         if (length <= 0) {
             throw new NumberFormatException("Invalid input: Empty string");
         }
-        int i = 0;
-        final byte delByte = (byte) delimiter;
 
-        while (i < length && bytes[startPos + i] != delByte) {
+        final byte delByte = (byte) delimiter;
+        final int base = startPos;
+        final int max = base + length;
+        int i = base;
+
+        // find end position (first delimiter or end)
+        while (i < max && bytes[i] != delByte) {
             i++;
         }
 
-        if (i > 0
-                && (Character.isWhitespace(bytes[startPos])
-                        || Character.isWhitespace(bytes[startPos + i - 1]))) {
+        final int fieldLen = i - base;
+
+        if (fieldLen > 0
+                && (Character.isWhitespace(bytes[base])
+                        || Character.isWhitespace(bytes[base + fieldLen - 1]))) {
             throw new NumberFormatException(
                     "There is leading or trailing whitespace in the numeric field.");
         }
 
-        final char[] chars = new char[i];
-        for (int j = 0; j < i; j++) {
-            final byte b = bytes[startPos + j];
+        final char[] chars = new char[fieldLen];
+        // validate and copy in one pass
+        for (int k = base, j = 0; k < i; k++, j++) {
+            final byte b = bytes[k];
             if ((b < '0' || b > '9') && b != '-' && b != '+' && b != '.' && b != 'E' && b != 'e') {
                 throw new NumberFormatException();
             }
-            chars[j] = (char) bytes[startPos + j];
+            chars[j] = (char) b;
         }
         return new BigDecimal(chars);
     }
