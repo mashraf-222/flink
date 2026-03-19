@@ -129,13 +129,14 @@ public class PropertiesUtil {
     public static Properties flatten(Properties config) {
         final Properties flattenProperties = new Properties();
 
-        Collections.list(config.propertyNames()).stream()
-                .forEach(
-                        name -> {
-                            Preconditions.checkArgument(name instanceof String);
-                            flattenProperties.setProperty(
-                                    (String) name, config.getProperty((String) name));
-                        });
+        java.util.Enumeration<?> names = config.propertyNames();
+        while (names.hasMoreElements()) {
+            Object name = names.nextElement();
+            Preconditions.checkArgument(name instanceof String);
+            String key = (String) name;
+            String value = config.getProperty(key);
+            flattenProperties.setProperty(key, value);
+        }
 
         return flattenProperties;
     }
