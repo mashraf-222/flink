@@ -63,12 +63,7 @@ public class FieldSet implements Iterable<Integer> {
         if (fieldIDs == null || fieldIDs.length == 0) {
             this.collection = Collections.emptySet();
         } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * fieldIDs.length);
-            for (int i = 0; i < fieldIDs.length; i++) {
-                set.add(fieldIDs[i]);
-            }
-
-            this.collection = Collections.unmodifiableSet(set);
+            this.collection = unmodifiableSetFromInts(fieldIDs);
         }
     }
 
@@ -81,12 +76,7 @@ public class FieldSet implements Iterable<Integer> {
         if (fieldIDs == null || fieldIDs.length == 0) {
             this.collection = Collections.emptySet();
         } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * fieldIDs.length);
-            for (int i = 0; i < fieldIDs.length; i++) {
-                set.add(fieldIDs[i]);
-            }
-
-            this.collection = Collections.unmodifiableSet(set);
+            this.collection = unmodifiableSetFromInts(fieldIDs);
         }
     }
 
@@ -102,7 +92,8 @@ public class FieldSet implements Iterable<Integer> {
         if (fieldSet.size() == 0) {
             this.collection = Collections.singleton(fieldID);
         } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * (fieldSet.collection.size() + 1));
+            int expected = fieldSet.collection.size() + 1;
+            HashSet<Integer> set = new HashSet<Integer>(initialCapacity(expected));
             set.addAll(fieldSet.collection);
             set.add(fieldID);
             this.collection = Collections.unmodifiableSet(set);
@@ -113,8 +104,9 @@ public class FieldSet implements Iterable<Integer> {
         if (fieldIDs == null || fieldIDs.length == 0) {
             this.collection = fieldSet.collection;
         } else {
+            int expected = fieldSet.collection.size() + fieldIDs.length;
             HashSet<Integer> set =
-                    new HashSet<Integer>(2 * (fieldSet.collection.size() + fieldIDs.length));
+                    new HashSet<Integer>(initialCapacity(expected));
             set.addAll(fieldSet.collection);
 
             for (int i = 0; i < fieldIDs.length; i++) {
@@ -131,7 +123,8 @@ public class FieldSet implements Iterable<Integer> {
         } else if (fieldSet1.size() == 0) {
             this.collection = fieldSet2.collection;
         } else {
-            HashSet<Integer> set = new HashSet<Integer>(2 * (fieldSet1.size() + fieldSet2.size()));
+            int expected = fieldSet1.size() + fieldSet2.size();
+            HashSet<Integer> set = new HashSet<Integer>(initialCapacity(expected));
             set.addAll(fieldSet1.collection);
             set.addAll(fieldSet2.collection);
             this.collection = Collections.unmodifiableSet(set);
@@ -251,13 +244,18 @@ public class FieldSet implements Iterable<Integer> {
     public String toString() {
         StringBuilder bld = new StringBuilder();
         bld.append(getDescriptionPrefix());
-        for (Integer i : this.collection) {
-            bld.append(i);
-            bld.append(',');
-            bld.append(' ');
-        }
-        if (this.collection.size() > 0) {
-            bld.setLength(bld.length() - 2);
+        int sz = this.collection.size();
+        if (sz > 0) {
+            Iterator<Integer> it = this.collection.iterator();
+            // append first
+            if (it.hasNext()) {
+                bld.append(it.next());
+            }
+            while (it.hasNext()) {
+                bld.append(',');
+                bld.append(' ');
+                bld.append(it.next());
+            }
         }
         bld.append(getDescriptionSuffix());
         return bld.toString();
@@ -282,4 +280,24 @@ public class FieldSet implements Iterable<Integer> {
     protected String getDescriptionSuffix() {
         return ")";
     }
+
+    private static Collection<Integer> unmodifiableSetFromInts(int[] fieldIDs) {
+        // fieldIDs is not null and length > 0 when called
+        int n = fieldIDs.length;
+        HashSet<Integer> set = new HashSet<Integer>(initialCapacity(n));
+        for (int i = 0; i < n; i++) {
+            set.add(fieldIDs[i]);
+        }
+        return Collections.unmodifiableSet(set);
+    }
+
+    private static int initialCapacity(int expectedSize) {
+        // Avoid division by zero and ensure at least 1
+        if (expectedSize <= 0) {
+            return 1;
+        }
+        // capacity = expectedSize / loadFactor + 1
+        return (int) (expectedSize / 0.75f) + 1;
+    }
+
 }
