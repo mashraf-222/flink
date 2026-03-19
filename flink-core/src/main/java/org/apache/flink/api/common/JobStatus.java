@@ -87,7 +87,14 @@ public enum JobStatus {
      * @return True, if this job status is globally terminal, false otherwise.
      */
     public boolean isGloballyTerminalState() {
-        return terminalState == TerminalState.GLOBALLY;
+        switch (this) {
+            case FAILED:
+            case CANCELED:
+            case FINISHED:
+                return true;
+            default:
+                return false;
+        }
     }
 
     /**
