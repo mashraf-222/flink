@@ -96,30 +96,27 @@ public final class ChildFirstClassLoader extends FlinkUserCodeClassLoader {
     @Override
     public Enumeration<URL> getResources(String name) throws IOException {
         // first get resources from URLClassloader
-        Enumeration<URL> urlClassLoaderResources = findResources(name);
-
-        final List<URL> result = new ArrayList<>();
-
-        while (urlClassLoaderResources.hasMoreElements()) {
-            result.add(urlClassLoaderResources.nextElement());
-        }
+        final Enumeration<URL> urlClassLoaderResources = findResources(name);
 
         // get parent urls
-        Enumeration<URL> parentResources = getParent().getResources(name);
+        final Enumeration<URL> parentResources = getParent().getResources(name);
 
-        while (parentResources.hasMoreElements()) {
-            result.add(parentResources.nextElement());
-        }
-
+        // Return a lazy Enumeration that iterates first over the URLClassLoader resources, then the parent.
         return new Enumeration<URL>() {
-            Iterator<URL> iter = result.iterator();
-
             public boolean hasMoreElements() {
-                return iter.hasNext();
+                return (urlClassLoaderResources != null && urlClassLoaderResources.hasMoreElements())
+                        || (parentResources != null && parentResources.hasMoreElements());
             }
 
             public URL nextElement() {
-                return iter.next();
+                if (urlClassLoaderResources != null && urlClassLoaderResources.hasMoreElements()) {
+                    return urlClassLoaderResources.nextElement();
+                }
+                if (parentResources != null && parentResources.hasMoreElements()) {
+                    return parentResources.nextElement();
+                }
+                // Preserve the original behavior of throwing NoSuchElementException when exhausted.
+                throw new java.util.NoSuchElementException();
             }
         };
     }
