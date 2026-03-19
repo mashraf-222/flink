@@ -35,6 +35,8 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 public class MdcUtils {
 
     public static final String JOB_ID = "flink-job-id";
+    private static final java.util.concurrent.ConcurrentHashMap<String, Map<String, String>> CONTEXT_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * Replace MDC contents with the provided one and return a closeable object that can be used to
