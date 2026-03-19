@@ -58,7 +58,7 @@ public class LongValueComparator extends TypeComparator<LongValue> {
 
     @Override
     public boolean equalToReference(LongValue candidate) {
-        return candidate.equals(this.reference);
+        return candidate.getValue() == this.reference.getValue();
     }
 
     @Override
