@@ -1178,7 +1178,11 @@ public final class MemorySegment {
      *     segment size minus 8.
      */
     public double getDoubleLittleEndian(int index) {
-        return Double.longBitsToDouble(getLongLittleEndian(index));
+        long bits = getLong(index);
+        if (!LITTLE_ENDIAN) {
+            bits = Long.reverseBytes(bits);
+        }
+        return Double.longBitsToDouble(bits);
     }
 
     /**
