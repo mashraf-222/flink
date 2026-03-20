@@ -77,6 +77,7 @@ public class Configuration extends ExecutionConfig.GlobalJobParameters
      * that is required by the standard YAML syntax.
      */
     protected final HashMap<String, Object> confData;
+    private static final Object ADD_ALL_TIE_LOCK = new Object();
 
     // --------------------------------------------------------------------------------------------
 
