@@ -117,4 +117,10 @@ public final class LongPrimitiveArraySerializer extends TypeSerializerSingleton<
             super(() -> INSTANCE);
         }
     }
+
+    @Override
+    public LongPrimitiveArraySerializer duplicate() {
+        return INSTANCE;
+    }
+
 }
