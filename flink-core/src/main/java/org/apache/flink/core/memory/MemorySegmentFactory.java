@@ -59,10 +59,16 @@ public final class MemorySegmentFactory {
      */
     public static MemorySegment wrapCopy(byte[] bytes, int start, int end)
             throws IllegalArgumentException {
-        checkArgument(end >= start);
-        checkArgument(end <= bytes.length);
-        MemorySegment copy = allocateUnpooledSegment(end - start);
-        copy.put(0, bytes, start, copy.size());
+        // Combined and tightened validation in a single check to avoid multiple calls.
+        checkArgument(start >= 0 && end >= start && end <= bytes.length);
+
+        final int len = end - start;
+        final MemorySegment copy = allocateUnpooledSegment(len);
+
+        // Avoid calling put for zero-length copies to skip unnecessary overhead.
+        if (len > 0) {
+            copy.put(0, bytes, start, len);
+        }
         return copy;
     }
 
