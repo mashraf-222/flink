@@ -35,14 +35,21 @@ public class FloatParser extends FieldParser<Float> {
         }
 
         if (endPos > startPos
-                && (Character.isWhitespace(bytes[startPos])
-                        || Character.isWhitespace(bytes[endPos - 1]))) {
+                && (isAsciiWhitespace(bytes[startPos])
+                        || isAsciiWhitespace(bytes[endPos - 1]))) {
             setErrorState(ParseErrorState.NUMERIC_VALUE_ILLEGAL_CHARACTER);
             return -1;
         }
 
+        final int len = endPos - startPos;
+        // Avoid allocating a String for the empty field which would always fail parsing.
+        if (len == 0) {
+            setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+            return -1;
+        }
+
         String str =
-                new String(bytes, startPos, endPos - startPos, ConfigConstants.DEFAULT_CHARSET);
+                new String(bytes, startPos, len, ConfigConstants.DEFAULT_CHARSET);
         try {
             this.result = Float.parseFloat(str);
             return (endPos == limit) ? limit : endPos + delimiter.length;
@@ -102,4 +109,11 @@ public class FloatParser extends FieldParser<Float> {
         final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
         return Float.parseFloat(str);
     }
+
+    private static boolean isAsciiWhitespace(byte b) {
+        int v = b & 0xFF;
+        // ASCII whitespace characters: HT(9), LF(10), VT(11), FF(12), CR(13), SPACE(32)
+        return v == 9 || v == 10 || v == 11 || v == 12 || v == 13 || v == 32;
+    }
+
 }
