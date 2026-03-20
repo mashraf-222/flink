@@ -41,11 +41,13 @@ public class RefCountedFile implements RefCounted {
     private final AtomicInteger references;
 
     protected boolean closed;
+    private final java.nio.file.Path path;
 
     public RefCountedFile(final File file) {
         this.file = checkNotNull(file);
         this.references = new AtomicInteger(1);
         this.closed = false;
+        this.path = this.file.toPath();
     }
 
     public File getFile() {
@@ -59,7 +61,8 @@ public class RefCountedFile implements RefCounted {
 
     @Override
     public boolean release() {
-        if (references.decrementAndGet() == 0) {
+        // Trigger close only on the transition from 1 -> 0 (single atomic operation)
+        if (references.getAndDecrement() == 1) {
             return tryClose();
         }
         return false;
