@@ -99,7 +99,143 @@ public class FloatParser extends FieldParser<Float> {
                     "There is leading or trailing whitespace in the numeric field.");
         }
 
-        final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
-        return Float.parseFloat(str);
+        // Fast-path: only handle common ASCII decimal formats:
+        //   [+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?
+        // Only attempt fast parse when all bytes involved are single-byte ASCII (>= 0).
+        // For any non-ASCII or non-conforming input, fall back to the original behavior.
+        if (limitedLen == 0) {
+            // preserve original behavior for empty fields (will throw NumberFormatException)
+            final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+            return Float.parseFloat(str);
+        }
+
+        final int end = startPos + limitedLen;
+        int idx = startPos;
+        // Quick ASCII check for the first byte
+        byte b = bytes[idx];
+        if (b < 0) {
+            // non-ASCII -> fallback
+            final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+            return Float.parseFloat(str);
+        }
+
+        // optional sign
+        boolean negative = false;
+        if (b == '+' || b == '-') {
+            negative = (b == '-');
+            idx++;
+            if (idx >= end) {
+                final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+                return Float.parseFloat(str);
+            }
+        }
+
+        // Parse integer part digits
+        double intFracAccum = 0.0; // accumulate digits (both integer and fractional as integer)
+        int digits = 0;
+        boolean sawDigit = false;
+
+        while (idx < end) {
+            b = bytes[idx];
+            if (b < '0' || b > '9') {
+                break;
+            }
+            sawDigit = true;
+            intFracAccum = intFracAccum * 10.0 + (b - '0');
+            digits++;
+            idx++;
+        }
+
+        int fracDigits = 0;
+        // fractional part
+        if (idx < end && bytes[idx] == '.') {
+            idx++;
+            if (idx >= end) {
+                // trailing dot without digits -> fallback to preserve original parsing behavior
+                final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+                return Float.parseFloat(str);
+            }
+            while (idx < end) {
+                b = bytes[idx];
+                if (b < '0' || b > '9') {
+                    break;
+                }
+                sawDigit = true;
+                intFracAccum = intFracAccum * 10.0 + (b - '0');
+                fracDigits++;
+                idx++;
+            }
+        }
+
+        if (!sawDigit) {
+            // no digits at all -> fallback
+            final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+            return Float.parseFloat(str);
+        }
+
+        // exponent part
+        int exp = 0;
+        if (idx < end && (bytes[idx] == 'e' || bytes[idx] == 'E')) {
+            idx++;
+            if (idx >= end) {
+                // malformed exponent -> fallback
+                final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+                return Float.parseFloat(str);
+            }
+            boolean expNeg = false;
+            b = bytes[idx];
+            if (b == '+' || b == '-') {
+                expNeg = (b == '-');
+                idx++;
+                if (idx >= end) {
+                    final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+                    return Float.parseFloat(str);
+                }
+            }
+            int expVal = 0;
+            int expDigits = 0;
+            while (idx < end) {
+                b = bytes[idx];
+                if (b < '0' || b > '9') {
+                    // non-digit in exponent -> fallback
+                    final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+                    return Float.parseFloat(str);
+                }
+                expVal = expVal * 10 + (b - '0');
+                idx++;
+                expDigits++;
+                // avoid potential int overflow in pathological exponent strings:
+                if (expVal > 100000000) { // very large exponent, clamp and break to keep performance
+                    // will be handled correctly by Math.pow later (may produce inf/0)
+                    break;
+                }
+            }
+            if (expDigits == 0) {
+                final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+                return Float.parseFloat(str);
+            }
+            exp = expNeg ? -expVal : expVal;
+        }
+
+        // if there are remaining characters (non-digit/allowed), fallback
+        if (idx != end) {
+            final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
+            return Float.parseFloat(str);
+        }
+
+        // All checked: compute the floating value.
+        // intFracAccum holds all digits as integer; fracDigits counts digits after decimal point.
+        int adjustedExp = exp - fracDigits;
+
+        // Use Math.pow for exponent scaling. Using double for intermediate to keep precision before cast.
+        double value = intFracAccum;
+        if (adjustedExp != 0) {
+            value = value * Math.pow(10.0, adjustedExp);
+        }
+        if (negative) {
+            value = -value;
+        }
+        // Cast to float (matches Float.parseFloat behavior broadly for decimal numbers).
+        return (float) value;
     }
 }
