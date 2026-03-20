@@ -32,6 +32,7 @@ public final class NullValue implements NormalizableKey<NullValue>, CopyableValu
 
     /** The singleton NullValue instance. */
     private static final NullValue INSTANCE = new NullValue();
+    private static final int HASH = 53;
 
     /**
      * Returns the NullValue singleton instance.
@@ -80,7 +81,7 @@ public final class NullValue implements NormalizableKey<NullValue>, CopyableValu
 
     @Override
     public int hashCode() {
-        return 53;
+        return HASH;
     }
 
     // --------------------------------------------------------------------------------------------
