@@ -161,14 +161,23 @@ public class ParameterTool extends AbstractParameterTool {
     protected final Map<String, String> data;
 
     private ParameterTool(Map<String, String> data) {
-        this.data = Collections.unmodifiableMap(new HashMap<>(data));
+        // Create a defensive copy with an initial capacity sized to avoid rehashing.
+        // Keep behavior identical to the original (defensive copy + unmodifiable view).
+        final int size = data.size();
+        // Compute initial capacity to accommodate 'size' entries with default load factor 0.75
+        final int initialCapacity = Math.max((int) (size / 0.75f) + 1, 16);
+        HashMap<String, String> copy = new HashMap<>(initialCapacity);
+        copy.putAll(data);
+        this.data = Collections.unmodifiableMap(copy);
 
-        this.defaultData = new ConcurrentHashMap<>(data.size());
+        // Create defaultData with a capacity hint based on number of entries.
+        this.defaultData = new ConcurrentHashMap<>(initialCapacity);
 
-        this.unrequestedParameters =
-                Collections.newSetFromMap(new ConcurrentHashMap<>(data.size()));
+        // Use ConcurrentHashMap.newKeySet to avoid creating an extra backing map object.
+        this.unrequestedParameters = ConcurrentHashMap.newKeySet(size);
 
-        unrequestedParameters.addAll(data.keySet());
+        // Populate the unrequestedParameters from the defensive copy's keys.
+        unrequestedParameters.addAll(copy.keySet());
     }
 
     @Override
