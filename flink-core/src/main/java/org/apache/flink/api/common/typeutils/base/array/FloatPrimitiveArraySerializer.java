@@ -37,6 +37,8 @@ public final class FloatPrimitiveArraySerializer extends TypeSerializerSingleton
 
     public static final FloatPrimitiveArraySerializer INSTANCE =
             new FloatPrimitiveArraySerializer();
+    private static final ThreadLocal<byte[]> TL_BUFFER =
+                ThreadLocal.withInitial(() -> new byte[1024]);
 
     @Override
     public boolean isImmutableType() {
