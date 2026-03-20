@@ -126,28 +126,31 @@ public final class GlobalConfiguration {
 
         final File confDirFile = new File(configDir);
         if (!(confDirFile.exists())) {
+            final String confDirAbs = confDirFile.getAbsolutePath();
             throw new IllegalConfigurationException(
                     "The given configuration directory name '"
                             + configDir
                             + "' ("
-                            + confDirFile.getAbsolutePath()
+                            + confDirAbs
                             + ") does not describe an existing directory.");
         }
 
         // get Flink yaml configuration file
         Configuration configuration;
-        File yamlConfigFile = new File(confDirFile, FLINK_CONF_FILENAME);
+        final File yamlConfigFile = new File(confDirFile, FLINK_CONF_FILENAME);
         if (!yamlConfigFile.exists()) {
+            final String yamlAbs = yamlConfigFile.getAbsolutePath();
             throw new IllegalConfigurationException(
                     "The Flink config file '"
                             + yamlConfigFile
                             + "' ("
-                            + yamlConfigFile.getAbsolutePath()
+                            + yamlAbs
                             + ") does not exist.");
         } else {
+            final String yamlAbs = yamlConfigFile.getAbsolutePath();
             LOG.info(
                     "Using standard YAML parser to load flink configuration file from {}.",
-                    yamlConfigFile.getAbsolutePath());
+                    yamlAbs);
             configuration = loadYAMLResource(yamlConfigFile);
         }
 
