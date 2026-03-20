@@ -184,6 +184,11 @@ public final class MemorySegmentFactory {
      * @return A new memory segment representing the given off-heap memory.
      */
     public static MemorySegment wrapOffHeapMemory(ByteBuffer memory) {
-        return new MemorySegment(memory, null);
+        // Fail fast on null to avoid doing extra work in deeper constructors.
+        java.util.Objects.requireNonNull(memory, "memory");
+
+        // Use a local reference (JIT-friendly) and return the newly created segment.
+        final ByteBuffer mem = memory;
+        return new MemorySegment(mem, null);
     }
 }
