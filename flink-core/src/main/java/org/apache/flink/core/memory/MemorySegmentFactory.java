@@ -45,7 +45,8 @@ public final class MemorySegmentFactory {
      * @return A new memory segment that targets the given heap memory region.
      */
     public static MemorySegment wrap(byte[] buffer) {
-        return new MemorySegment(buffer, null);
+        final byte[] buf = buffer;
+        return new MemorySegment(buf, null);
     }
 
     /**
