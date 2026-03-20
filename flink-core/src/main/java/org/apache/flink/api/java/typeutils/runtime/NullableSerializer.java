@@ -152,9 +152,11 @@ public class NullableSerializer<T> extends TypeSerializer<T> {
      */
     public static <T> TypeSerializer<T> wrap(
             @Nonnull TypeSerializer<T> originalSerializer, boolean padNullValueIfFixedLen) {
-        return originalSerializer instanceof NullableSerializer
-                ? originalSerializer
-                : new NullableSerializer<>(originalSerializer, padNullValueIfFixedLen);
+        final TypeSerializer<T> serializer = originalSerializer;
+        if (serializer instanceof NullableSerializer) {
+            return serializer;
+        }
+        return new NullableSerializer<>(serializer, padNullValueIfFixedLen);
     }
 
     @Override
