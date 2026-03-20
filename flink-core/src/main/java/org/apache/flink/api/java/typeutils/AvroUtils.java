@@ -41,23 +41,58 @@ public abstract class AvroUtils {
 
     protected static final String AVRO_SPECIFIC_RECORD_BASE_CLASS =
             "org.apache.avro.specific.SpecificRecordBase";
+    private static volatile Object CACHED_AVRO_UTILS = null;
 
     /**
      * Returns either the default {@link AvroUtils} which throw an exception in cases where Avro
      * would be needed or loads the specific utils for Avro from flink-avro.
      */
     public static AvroUtils getAvroUtils() {
-        // try and load the special AvroUtils from the flink-avro package
-        try {
-            Class<?> clazz =
-                    Class.forName(
-                            AVRO_KRYO_UTILS, false, Thread.currentThread().getContextClassLoader());
-            return clazz.asSubclass(AvroUtils.class).getConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            // cannot find the utils, return the default implementation
+        Object cached = CACHED_AVRO_UTILS;
+        if (cached == null) {
+            synchronized (AvroUtils.class) {
+                cached = CACHED_AVRO_UTILS;
+                if (cached == null) {
+                    try {
+                        Class<?> clazz =
+                                Class.forName(
+                                        AVRO_KRYO_UTILS, false, Thread.currentThread().getContextClassLoader());
+                        @SuppressWarnings("unchecked")
+                        Class<? extends AvroUtils> avroClass = clazz.asSubclass(AvroUtils.class);
+                        java.lang.reflect.Constructor<? extends AvroUtils> ctor = avroClass.getConstructor();
+                        CACHED_AVRO_UTILS = ctor;
+                        cached = ctor;
+                    } catch (ClassNotFoundException e) {
+                        // cannot find the utils, remember absence and return the default implementation
+                        CACHED_AVRO_UTILS = Boolean.FALSE;
+                        return new DefaultAvroUtils();
+                    } catch (Exception e) {
+                        RuntimeException re =
+                                new RuntimeException("Could not instantiate " + AVRO_KRYO_UTILS + ".", e);
+                        CACHED_AVRO_UTILS = re;
+                        throw re;
+                    }
+                }
+            }
+        }
+
+        if (cached instanceof java.lang.reflect.Constructor) {
+            try {
+                @SuppressWarnings("unchecked")
+                java.lang.reflect.Constructor<? extends AvroUtils> ctor =
+                        (java.lang.reflect.Constructor<? extends AvroUtils>) cached;
+                return ctor.newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException("Could not instantiate " + AVRO_KRYO_UTILS + ".", e);
+            }
+        } else if (cached instanceof Boolean) {
+            // sentinel for no Avro on classpath
             return new DefaultAvroUtils();
-        } catch (Exception e) {
-            throw new RuntimeException("Could not instantiate " + AVRO_KRYO_UTILS + ".", e);
+        } else if (cached instanceof RuntimeException) {
+            throw (RuntimeException) cached;
+        } else {
+            // Fallback - should not occur, but match original behavior by returning default
+            return new DefaultAvroUtils();
         }
     }
 
