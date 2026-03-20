@@ -85,7 +85,33 @@ public final class JobID extends AbstractID {
      * @return A new JobID corresponding to the ID encoded in the bytes.
      */
     public static JobID fromByteArray(byte[] bytes) {
-        return new JobID(bytes);
+        // Fast-path manual decoding to avoid ByteBuffer allocation in hot paths.
+        // Preserve the original behavior: NPE on null and IllegalArgumentException on wrong length.
+        if (bytes.length != 16) {
+            throw new IllegalArgumentException("The byte array must be exactly 16 bytes long.");
+        }
+
+        long lower =
+                ((long) bytes[0] & 0xFFL) << 56
+                        | ((long) bytes[1] & 0xFFL) << 48
+                        | ((long) bytes[2] & 0xFFL) << 40
+                        | ((long) bytes[3] & 0xFFL) << 32
+                        | ((long) bytes[4] & 0xFFL) << 24
+                        | ((long) bytes[5] & 0xFFL) << 16
+                        | ((long) bytes[6] & 0xFFL) << 8
+                        | ((long) bytes[7] & 0xFFL);
+
+        long upper =
+                ((long) bytes[8] & 0xFFL) << 56
+                        | ((long) bytes[9] & 0xFFL) << 48
+                        | ((long) bytes[10] & 0xFFL) << 40
+                        | ((long) bytes[11] & 0xFFL) << 32
+                        | ((long) bytes[12] & 0xFFL) << 24
+                        | ((long) bytes[13] & 0xFFL) << 16
+                        | ((long) bytes[14] & 0xFFL) << 8
+                        | ((long) bytes[15] & 0xFFL);
+
+        return new JobID(lower, upper);
     }
 
     public static JobID fromByteBuffer(ByteBuffer buf) {
