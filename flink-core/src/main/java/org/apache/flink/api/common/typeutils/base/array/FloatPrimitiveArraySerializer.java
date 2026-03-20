@@ -50,9 +50,7 @@ public final class FloatPrimitiveArraySerializer extends TypeSerializerSingleton
 
     @Override
     public float[] copy(float[] from) {
-        float[] copy = new float[from.length];
-        System.arraycopy(from, 0, copy, 0, from.length);
-        return copy;
+        return (float[]) from.clone();
     }
 
     @Override
