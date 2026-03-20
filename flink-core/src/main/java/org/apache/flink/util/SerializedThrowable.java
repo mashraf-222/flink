@@ -52,6 +52,7 @@ public class SerializedThrowable extends Exception implements Serializable {
      * unloading the exception class.
      */
     private transient WeakReference<Throwable> cachedException;
+    private static final Object SERIALIZE_LOCK = new Object();
 
     /**
      * Create a new SerializedThrowable.
@@ -70,7 +71,7 @@ public class SerializedThrowable extends Exception implements Serializable {
             byte[] serialized;
             // introduce the synchronization here to avoid deadlock of multi thread serializing
             // exceptions
-            synchronized (SerializedThrowable.class) {
+            synchronized (SERIALIZE_LOCK) {
                 try {
                     serialized = InstantiationUtil.serializeObject(exception);
                 } catch (Throwable t) {
@@ -88,13 +89,14 @@ public class SerializedThrowable extends Exception implements Serializable {
             setStackTrace(exception.getStackTrace());
 
             // mimic the original exception's cause
-            if (exception.getCause() == null) {
+            Throwable cause = exception.getCause();
+            if (cause == null) {
                 initCause(null);
             } else {
                 // exception causes may by cyclic, so we truncate the cycle when we find it
                 if (alreadySeen.add(exception)) {
                     // we are not in a cycle, yet
-                    initCause(new SerializedThrowable(exception.getCause(), alreadySeen));
+                    initCause(new SerializedThrowable(cause, alreadySeen));
                 }
             }
             // mimic suppressed exceptions
@@ -119,18 +121,30 @@ public class SerializedThrowable extends Exception implements Serializable {
             return this;
         }
 
-        Throwable cached = cachedException == null ? null : cachedException.get();
-        if (cached == null) {
-            try {
-                cached = InstantiationUtil.deserializeObject(serializedException, classloader);
-                cachedException = new WeakReference<>(cached);
-            } catch (Throwable t) {
-                // something went wrong
-                // return this SerializedThrowable as a stand in
-                return this;
-            }
+        // Fast-path: try to read cached reference without synchronization.
+        WeakReference<Throwable> ref = cachedException;
+        Throwable cached = ref == null ? null : ref.get();
+        if (cached != null) {
+            return cached;
         }
-        return cached;
+
+        // Only one thread should deserialize the payload; other threads wait and then
+        // read the cached value. This avoids duplicate heavy deserialization calls.
+        synchronized (this) {
+            ref = cachedException;
+            cached = ref == null ? null : ref.get();
+            if (cached == null) {
+                try {
+                    cached = InstantiationUtil.deserializeObject(serializedException, classloader);
+                    cachedException = new WeakReference<>(cached);
+                } catch (Throwable t) {
+                    // something went wrong
+                    // return this SerializedThrowable as a stand in
+                    return this;
+                }
+            }
+            return cached;
+        }
     }
 
     public String getOriginalErrorClassName() {
