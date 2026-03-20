@@ -636,7 +636,13 @@ public class SecurityOptions {
      * Checks whether SSL for internal communication (rpc, data transport, blob server) is enabled.
      */
     public static boolean isInternalSSLEnabled(Configuration sslConfig) {
-        return sslConfig.get(SSL_INTERNAL_ENABLED);
+        // fail fast for null configuration (same exception type as the original behavior)
+        checkNotNull(sslConfig);
+
+        // Cache the frequently accessed static option into a local variable to reduce
+        // static field access overhead in hot paths.
+        final ConfigOption<Boolean> opt = SSL_INTERNAL_ENABLED;
+        return sslConfig.get(opt);
     }
 
     /** Checks whether SSL for the external REST endpoint is enabled. */
