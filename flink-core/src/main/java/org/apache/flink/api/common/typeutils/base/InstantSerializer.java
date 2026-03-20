@@ -117,4 +117,22 @@ public final class InstantSerializer extends TypeSerializerSingleton<Instant> {
             super(() -> INSTANCE);
         }
     }
+
+    @Override
+    public TypeSerializerSingleton<Instant> duplicate() {
+        // Stateless singleton; safe to return same instance
+        return INSTANCE;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        // All instances of this serializer are equivalent (singleton)
+        return obj == this || obj instanceof InstantSerializer;
+    }
+
+    @Override
+    public int hashCode() {
+        return InstantSerializer.class.hashCode();
+    }
+
 }
