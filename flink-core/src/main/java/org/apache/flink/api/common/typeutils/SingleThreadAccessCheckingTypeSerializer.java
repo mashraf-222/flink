@@ -42,9 +42,32 @@ public class SingleThreadAccessCheckingTypeSerializer<T> extends TypeSerializer<
 
     @Override
     public boolean isImmutableType() {
-        try (SingleThreadAccessCheck ignored =
-                singleThreadAccessChecker.startSingleThreadAccessCheck()) {
-            return originalSerializer.isImmutableType();
+        // Cache fields into locals to avoid repeated field access and enable better JIT optimization.
+        final SingleThreadAccessChecker checker = this.singleThreadAccessChecker;
+        final TypeSerializer<T> serializer = this.originalSerializer;
+
+        // Manually manage the lifecycle of the access check to avoid the try-with-resources overhead
+        // while preserving exact suppression semantics.
+        SingleThreadAccessCheck ignored = null;
+        Throwable primaryException = null;
+        try {
+            ignored = checker.startSingleThreadAccessCheck();
+            return serializer.isImmutableType();
+        } catch (Throwable t) {
+            primaryException = t;
+            throw t;
+        } finally {
+            if (ignored != null) {
+                try {
+                    ignored.close();
+                } catch (Throwable closeEx) {
+                    if (primaryException != null) {
+                        primaryException.addSuppressed(closeEx);
+                    } else {
+                        throw closeEx;
+                    }
+                }
+            }
         }
     }
 
