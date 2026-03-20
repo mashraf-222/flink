@@ -38,6 +38,7 @@ public class PluginDescriptor {
      * See {@link org.apache.flink.util.ChildFirstClassLoader}'s field alwaysParentFirstPatterns.
      */
     private final String[] loaderExcludePatterns;
+    private transient volatile String cachedToString;
 
     public PluginDescriptor(
             String pluginId, URL[] pluginResourceURLs, String[] loaderExcludePatterns) {
@@ -60,14 +61,23 @@ public class PluginDescriptor {
 
     @Override
     public String toString() {
-        return "PluginDescriptor{"
-                + "pluginId='"
-                + pluginId
-                + '\''
-                + ", pluginResourceURLs="
-                + Arrays.toString(pluginResourceURLs)
-                + ", loaderExcludePatterns="
-                + Arrays.toString(loaderExcludePatterns)
-                + '}';
+        String result = cachedToString;
+        if (result == null) {
+            synchronized (this) {
+                result = cachedToString;
+                if (result == null) {
+                    // Build the string once and cache it.
+                    StringBuilder sb = new StringBuilder(128);
+                    sb.append("PluginDescriptor{");
+                    sb.append("pluginId='").append(pluginId).append('\'');
+                    sb.append(", pluginResourceURLs=").append(Arrays.toString(pluginResourceURLs));
+                    sb.append(", loaderExcludePatterns=").append(Arrays.toString(loaderExcludePatterns));
+                    sb.append('}');
+                    result = sb.toString();
+                    cachedToString = result;
+                }
+            }
+        }
+        return result;
     }
 }
