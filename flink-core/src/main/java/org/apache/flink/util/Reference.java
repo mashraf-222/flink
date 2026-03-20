@@ -50,7 +50,13 @@ public final class Reference<T> {
 
     @Override
     public String toString() {
-        return value.toString();
+        // Cache the field in a local variable to avoid repeated field access.
+        T v = this.value;
+        // Fast-path for String instances: return the String directly to avoid a virtual call.
+        if (v instanceof String) {
+            return (String) v;
+        }
+        return v.toString();
     }
 
     public static <V> Reference<V> owned(V value) {
