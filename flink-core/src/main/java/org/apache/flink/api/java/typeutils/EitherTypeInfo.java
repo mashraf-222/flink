@@ -113,15 +113,23 @@ public class EitherTypeInfo<L, R> extends TypeInformation<Either<L, R>> {
     @SuppressWarnings("unchecked")
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof EitherTypeInfo) {
-            EitherTypeInfo<L, R> other = (EitherTypeInfo<L, R>) obj;
-
-            return other.canEqual(this)
-                    && leftType.equals(other.leftType)
-                    && rightType.equals(other.rightType);
-        } else {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof EitherTypeInfo<?, ?>)) {
             return false;
         }
+        EitherTypeInfo<?, ?> other = (EitherTypeInfo<?, ?>) obj;
+
+        if (!other.canEqual(this)) {
+            return false;
+        }
+
+        // Cache fields to locals to avoid repeated field access in tight loops
+        TypeInformation<?> thisLeft = this.leftType;
+        TypeInformation<?> thisRight = this.rightType;
+
+        return thisLeft.equals(other.leftType) && thisRight.equals(other.rightType);
     }
 
     @Override
