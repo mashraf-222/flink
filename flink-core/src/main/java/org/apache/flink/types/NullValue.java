@@ -75,6 +75,9 @@ public final class NullValue implements NormalizableKey<NullValue>, CopyableValu
 
     @Override
     public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
         return (o != null && o.getClass() == NullValue.class);
     }
 
