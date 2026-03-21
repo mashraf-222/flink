@@ -278,15 +278,27 @@ public class ConfigurationUtils {
                 "Dynamic option string contained odd number of arguments: #arguments=%s, (%s)",
                 configStrs.length,
                 dynamicConfigsStr);
-        for (int i = 0; i < configStrs.length; ++i) {
+
+        // Pre-size the map to avoid rehashing: pairs = configStrs.length / 2.
+        int pairs = configStrs.length / 2;
+        // compute capacity to accommodate load factor 0.75 -> capacity = ceil(pairs / 0.75)
+        int initialCapacity = (int) ((pairs / 0.75f) + 1.0f);
+        configs = new HashMap<>(initialCapacity);
+
+        for (int i = 0; i < configStrs.length; i += 2) {
             String configStr = configStrs[i];
-            if (i % 2 == 0) {
-                checkArgument(configStr.equals("-D"));
-            } else {
-                String[] configKV = configStr.split("=");
-                checkArgument(configKV.length == 2);
-                configs.put(configKV[0], configKV[1]);
-            }
+            // even index must be "-D"
+            checkArgument(configStr.equals("-D"));
+
+            String kv = configStrs[i + 1];
+            // ensure exactly one '=' present, similar to split("=").length == 2
+            int eqIdx = kv.indexOf('=');
+            checkArgument(eqIdx >= 0);
+            checkArgument(kv.lastIndexOf('=') == eqIdx);
+
+            String key = kv.substring(0, eqIdx);
+            String value = kv.substring(eqIdx + 1);
+            configs.put(key, value);
         }
 
         checkConfigContains(configs, TaskManagerOptions.CPU_CORES.key());
