@@ -42,13 +42,42 @@ public class DoublePrimitiveArrayComparator
 
     @Override
     public int compare(double[] first, double[] second) {
-        for (int x = 0; x < min(first.length, second.length); x++) {
-            int cmp = Double.compare(first[x], second[x]);
+        int len1 = first.length;
+        int len2 = second.length;
+        int lim = len1 < len2 ? len1 : len2;
+        int sign = ascending ? 1 : -1;
+
+        int i = 0;
+        // Unroll loop in chunks of 4 for lower loop overhead in hot paths
+        int bound = lim - 3;
+        while (i < bound) {
+            int cmp = Double.compare(first[i], second[i]);
             if (cmp != 0) {
-                return ascending ? cmp : -cmp;
+                return cmp * sign;
             }
+            cmp = Double.compare(first[i + 1], second[i + 1]);
+            if (cmp != 0) {
+                return cmp * sign;
+            }
+            cmp = Double.compare(first[i + 2], second[i + 2]);
+            if (cmp != 0) {
+                return cmp * sign;
+            }
+            cmp = Double.compare(first[i + 3], second[i + 3]);
+            if (cmp != 0) {
+                return cmp * sign;
+            }
+            i += 4;
         }
-        int cmp = first.length - second.length;
+        // Remainder
+        while (i < lim) {
+            int cmp = Double.compare(first[i], second[i]);
+            if (cmp != 0) {
+                return cmp * sign;
+            }
+            i++;
+        }
+        int cmp = len1 - len2;
         return ascending ? cmp : -cmp;
     }
 
