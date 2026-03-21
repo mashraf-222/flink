@@ -172,7 +172,11 @@ public class AccumulatorHelper {
     }
 
     public static Map<String, Accumulator<?, ?>> copy(Map<String, Accumulator<?, ?>> accumulators) {
-        Map<String, Accumulator<?, ?>> result = new HashMap<String, Accumulator<?, ?>>();
+        // Pre-size the HashMap to avoid rehashing when inserting many entries.
+        int initialCapacity = accumulators.size() > 0
+                ? (int) (accumulators.size() / 0.75f) + 1
+                : 16;
+        Map<String, Accumulator<?, ?>> result = new HashMap<>(initialCapacity);
 
         for (Map.Entry<String, Accumulator<?, ?>> entry : accumulators.entrySet()) {
             result.put(entry.getKey(), entry.getValue().clone());
