@@ -128,6 +128,80 @@ public class ConfigurationUtils {
      * @return parsed map
      */
     public static Map<String, String> parseStringToMap(String stringSerializedMap) {
+        // Fast-path: handle simple comma-separated key:value pairs without quotes/braces.
+        // Conditions are conservative to avoid altering behavior for inputs that require YAML parsing
+        // or special escaping. For other inputs we delegate to the original convertToProperties.
+        if (stringSerializedMap != null) {
+            String s = stringSerializedMap;
+            // If the string contains quotes or braces, YAML or escaping may be required.
+            if (s.indexOf('\'') < 0 && s.indexOf('"') < 0 && s.indexOf('{') < 0 && s.indexOf('}') < 0 && s.indexOf(':') >= 0) {
+                int len = s.length();
+                // Estimate number of entries from commas to size the HashMap and reduce resizes.
+                int commas = 0;
+                for (int i = 0; i < len; i++) {
+                    if (s.charAt(i) == ',') {
+                        commas++;
+                    }
+                }
+                HashMap<String, String> result = new HashMap<>(Math.max(4, commas + 1));
+                int i = 0;
+                while (i < len) {
+                    // skip leading whitespace
+                    while (i < len && Character.isWhitespace(s.charAt(i))) {
+                        i++;
+                    }
+                    if (i >= len) {
+                        break;
+                    }
+                    int keyStart = i;
+                    int keyEnd = -1;
+                    // find ':' separating key and value, but if we reach end or unexpected ',' before ':', abort to fallback
+                    while (i < len) {
+                        char c = s.charAt(i);
+                        if (c == ':') {
+                            keyEnd = i;
+                            i++; // move past ':'
+                            break;
+                        } else if (c == ',') {
+                            // a comma before any colon => ambiguous format, fallback to preserve behavior
+                            return convertToProperties(stringSerializedMap);
+                        }
+                        i++;
+                    }
+                    if (keyEnd == -1) {
+                        // No colon found for this segment; delegate to original behavior to preserve compatibility.
+                        return convertToProperties(stringSerializedMap);
+                    }
+                    String key = s.substring(keyStart, keyEnd).trim();
+
+                    // Read value until next unescaped comma (we already disallow quotes so no escaping handling needed)
+                    int valueStart = i;
+                    int valueEnd = valueStart;
+                    boolean foundDelimiter = false;
+                    while (i < len) {
+                        char c = s.charAt(i);
+                        if (c == ',') {
+                            valueEnd = i;
+                            i++; // move past ','
+                            foundDelimiter = true;
+                            break;
+                        }
+                        i++;
+                    }
+                    if (!foundDelimiter) {
+                        valueEnd = len;
+                    }
+                    String value = s.substring(valueStart, valueEnd).trim();
+
+                    if (!key.isEmpty()) {
+                        result.put(key, value);
+                    }
+                    // loop continues to parse next pair
+                }
+                return result;
+            }
+        }
+        // For null or complex inputs, preserve original behavior exactly (including exceptions).
         return convertToProperties(stringSerializedMap);
     }
 
