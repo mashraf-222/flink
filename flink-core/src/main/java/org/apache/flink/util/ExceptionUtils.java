@@ -723,4 +723,29 @@ public final class ExceptionUtils {
 
     /** Private constructor to prevent instantiation. */
     private ExceptionUtils() {}
+
+    /**
+     * Case-insensitive indexOf equivalent that avoids allocating intermediate lower/upper-case
+     * Strings. Returns the index of the first occurrence of pattern in text (ignoring case), or -1
+     * if not found. Behaves like String.indexOf with respect to empty pattern (returns 0).
+     */
+    private static int indexOfIgnoreCase(String text, String pattern) {
+        int textLen = text.length();
+        int patLen = pattern.length();
+        if (patLen == 0) {
+            return 0;
+        }
+        if (patLen > textLen) {
+            return -1;
+        }
+
+        int max = textLen - patLen;
+        for (int i = 0; i <= max; i++) {
+            if (text.regionMatches(true, i, pattern, 0, patLen)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
 }
