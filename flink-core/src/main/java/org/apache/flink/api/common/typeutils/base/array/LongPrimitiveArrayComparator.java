@@ -32,8 +32,22 @@ public class LongPrimitiveArrayComparator extends PrimitiveArrayComparator<long[
     @Override
     public int hash(long[] record) {
         int result = 0;
-        for (long field : record) {
-            result += (int) (field ^ (field >>> 32));
+        int len = record.length;
+        int i = 0;
+        // Unroll loop in chunks of 4 to reduce loop overhead and bounds checks.
+        while (i + 4 <= len) {
+            long v0 = record[i++];
+            long v1 = record[i++];
+            long v2 = record[i++];
+            long v3 = record[i++];
+            result += (int) (v0 ^ (v0 >>> 32));
+            result += (int) (v1 ^ (v1 >>> 32));
+            result += (int) (v2 ^ (v2 >>> 32));
+            result += (int) (v3 ^ (v3 >>> 32));
+        }
+        while (i < len) {
+            long v = record[i++];
+            result += (int) (v ^ (v >>> 32));
         }
         return result;
     }
