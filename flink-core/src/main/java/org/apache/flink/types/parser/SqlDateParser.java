@@ -78,6 +78,71 @@ public class SqlDateParser extends FieldParser<Date> {
      *     represents not a correct number.
      */
     public static final Date parseField(byte[] bytes, int startPos, int length) {
+        // Fast-path for the common ISO date format "YYYY-MM-DD" (10 chars).
+        // This path uses only byte arithmetic and integer math to compute epoch millis
+        // and reuses DATE_INSTANCE to avoid allocations.
+        if (length == 10) {
+            final int p = startPos;
+            // positions: 0-3 year digits, 4 '-', 5-6 month digits, 7 '-', 8-9 day digits
+            // Ensure separators are '-' quickly.
+            if (bytes[p + 4] == '-' && bytes[p + 7] == '-') {
+                final int b0 = bytes[p]   - 48;
+                final int b1 = bytes[p+1] - 48;
+                final int b2 = bytes[p+2] - 48;
+                final int b3 = bytes[p+3] - 48;
+                final int b5 = bytes[p+5] - 48;
+                final int b6 = bytes[p+6] - 48;
+                final int b8 = bytes[p+8] - 48;
+                final int b9 = bytes[p+9] - 48;
+
+                // Quick digit validation (0-9)
+                if ((b0 | b1 | b2 | b3 | b5 | b6 | b8 | b9) >= 0 && (b0 <= 9 && b1 <= 9 && b2 <= 9 && b3 <= 9 && b5 <= 9 && b6 <= 9 && b8 <= 9 && b9 <= 9)) {
+                    final int year = b0 * 1000 + b1 * 100 + b2 * 10 + b3;
+                    final int month = b5 * 10 + b6;
+                    final int day = b8 * 10 + b9;
+
+                    // Basic validation of month/day ranges. On invalid values, preserve behavior by throwing.
+                    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                        // Validate day against month lengths including leap year for February.
+                        final boolean feb = (month == 2);
+                        if (feb) {
+                            final boolean leap = ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0);
+                            if (day > (leap ? 29 : 28)) {
+                                throw new IllegalArgumentException("Could not parse date");
+                            }
+                        } else if ((month == 4 || month == 6 || month == 9 || month == 11) && day > 30) {
+                            throw new IllegalArgumentException("Could not parse date");
+                        }
+
+                        // Compute epochDay using integer arithmetic similar to java.time.LocalDate.toEpochDay()
+                        long y = year;
+                        long m = month;
+                        long d = day;
+                        if (m <= 2) {
+                            y -= 1;
+                            m += 12;
+                        }
+                        long era = y / 400;
+                        long yoe = y - era * 400;                       // [0, 399]
+                        long doy = (153 * (m - 3) + 2) / 5 + d - 1;     // [0, 365]
+                        long doe = yoe * 365 + yoe / 4 - yoe / 100 + doy; // [0, 146096]
+                        long epochDay = era * 146097 + doe - 719468;
+
+                        long epochMilli = epochDay * 86_400_000L;
+
+                        // Reuse static instance to match original allocation/instance behavior.
+                        synchronized (DATE_INSTANCE) {
+                            DATE_INSTANCE.setTime(epochMilli);
+                            return DATE_INSTANCE;
+                        }
+                    } else {
+                        throw new IllegalArgumentException("Could not parse date");
+                    }
+                }
+            }
+        }
+
+        // Fallback to the original general parser for all other formats to preserve behavior.
         return parseField(bytes, startPos, length, (char) 0xffff);
     }
 
