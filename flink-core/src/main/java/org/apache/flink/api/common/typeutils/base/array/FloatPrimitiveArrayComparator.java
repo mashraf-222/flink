@@ -41,14 +41,35 @@ public class FloatPrimitiveArrayComparator
 
     @Override
     public int compare(float[] first, float[] second) {
-        for (int x = 0; x < min(first.length, second.length); x++) {
-            int cmp = Float.compare(first[x], second[x]);
-            if (cmp != 0) {
-                return ascending ? cmp : -cmp;
+        int firstLen = first.length;
+        int secondLen = second.length;
+        int limit = firstLen < secondLen ? firstLen : secondLen;
+        boolean asc = ascending;
+
+        for (int x = 0; x < limit; x++) {
+            float a = first[x];
+            float b = second[x];
+
+            int cmp;
+            if (a < b) {
+                cmp = -1;
+            } else if (a > b) {
+                cmp = 1;
+            } else {
+                // Handle 0.0 vs -0.0 and NaN semantics exactly as Float.compare
+                int ai = Float.floatToIntBits(a);
+                int bi = Float.floatToIntBits(b);
+                if (ai == bi) {
+                    continue;
+                }
+                cmp = ai < bi ? -1 : 1;
             }
+
+            return asc ? cmp : -cmp;
         }
-        int cmp = first.length - second.length;
-        return ascending ? cmp : -cmp;
+
+        int cmp = firstLen - secondLen;
+        return asc ? cmp : -cmp;
     }
 
     @Override
