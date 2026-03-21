@@ -33,8 +33,22 @@ public class FloatPrimitiveArrayComparator
     @Override
     public int hash(float[] record) {
         int result = 0;
-        for (float field : record) {
-            result += Float.floatToIntBits(field);
+        final float[] r = record;
+        int i = 0;
+        int len = r.length;
+
+        // Process 4 elements per iteration to reduce loop overhead and bounds checks.
+        int limit = len - 3;
+        while (i < limit) {
+            result += Float.floatToIntBits(r[i]);
+            result += Float.floatToIntBits(r[i + 1]);
+            result += Float.floatToIntBits(r[i + 2]);
+            result += Float.floatToIntBits(r[i + 3]);
+            i += 4;
+        }
+        // Handle remaining elements.
+        while (i < len) {
+            result += Float.floatToIntBits(r[i++]);
         }
         return result;
     }
