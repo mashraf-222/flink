@@ -634,7 +634,14 @@ public class ConfigurationUtils {
     }
 
     static boolean containsPrefixMap(Map<String, Object> confData, String key) {
-        return confData.keySet().stream().anyMatch(candidate -> filterPrefixMapKey(key, candidate));
+        // compute the prefix once to avoid repeated concatenation and avoid stream/lambda overhead
+        final String prefixKey = key + ".";
+        for (String candidate : confData.keySet()) {
+            if (candidate.startsWith(prefixKey)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static boolean removePrefixMap(Map<String, Object> confData, String key) {
