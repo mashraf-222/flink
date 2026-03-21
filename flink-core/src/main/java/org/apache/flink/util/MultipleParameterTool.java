@@ -120,6 +120,18 @@ public class MultipleParameterTool extends AbstractParameterTool {
             return false;
         }
         MultipleParameterTool that = (MultipleParameterTool) o;
+
+        // quick size checks to fast-fail for common inequality cases before deep equality checks
+        if (data.size() != that.data.size()) {
+            return false;
+        }
+        if (unrequestedParameters.size() != that.unrequestedParameters.size()) {
+            return false;
+        }
+        if (defaultData.size() != that.defaultData.size()) {
+            return false;
+        }
+
         return Objects.equals(data, that.data)
                 && Objects.equals(defaultData, that.defaultData)
                 && Objects.equals(unrequestedParameters, that.unrequestedParameters);
