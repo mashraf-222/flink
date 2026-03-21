@@ -33,8 +33,10 @@ public class DoublePrimitiveArrayComparator
     @Override
     public int hash(double[] record) {
         int result = 0;
-        for (double field : record) {
-            long bits = Double.doubleToLongBits(field);
+        final int len = record.length;
+        int i = 0;
+        while (i < len) {
+            long bits = Double.doubleToLongBits(record[i++]);
             result += (int) (bits ^ (bits >>> 32));
         }
         return result;
