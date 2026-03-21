@@ -75,13 +75,26 @@ class StructuredOptionsSplitter {
      * @return escaped string by single quote
      */
     static String escapeWithSingleQuote(String string, String... charsToEscape) {
-        boolean escape =
-                Arrays.stream(charsToEscape).anyMatch(string::contains)
-                        || string.contains("\"")
-                        || string.contains("'");
+        // Use a simple loop with indexOf instead of streams to avoid lambda/stream allocation overhead.
+        boolean escape = false;
+
+        for (String ch : charsToEscape) {
+            if (string.indexOf(ch) >= 0) {
+                escape = true;
+                break;
+            }
+        }
+
+        if (!escape) {
+            // Check for double or single quotes only once each.
+            if (string.indexOf('"') >= 0 || string.indexOf('\'') >= 0) {
+                escape = true;
+            }
+        }
 
         if (escape) {
-            return "'" + string.replaceAll("'", "''") + "'";
+            // Use String.replace to avoid regex processing done by replaceAll.
+            return "'" + string.replace("'", "''") + "'";
         }
 
         return string;
