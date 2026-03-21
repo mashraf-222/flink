@@ -63,9 +63,11 @@ public final class IndexedCombinedWatermarkStatus {
      *     checked separately via {@link #isIdle()}
      */
     public boolean updateWatermark(int index, long timestamp) {
-        checkArgument(index < partialWatermarks.length);
-        partialWatermarks[index].setWatermark(timestamp);
-        return combinedWatermarkStatus.updateCombinedWatermark();
+        final CombinedWatermarkStatus.PartialWatermark[] pws = this.partialWatermarks;
+        checkArgument(index < pws.length);
+        pws[index].setWatermark(timestamp);
+        final CombinedWatermarkStatus status = this.combinedWatermarkStatus;
+        return status.updateCombinedWatermark();
     }
 
     public long getCombinedWatermark() {
