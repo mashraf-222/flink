@@ -39,6 +39,7 @@ class LocalRecoverable implements CommitRecoverable, ResumeRecoverable {
 
     /** The position to resume from. */
     private final long offset;
+    private final String cachedToString;
 
     /**
      * Creates a resumable for the given file at the given position.
@@ -51,6 +52,7 @@ class LocalRecoverable implements CommitRecoverable, ResumeRecoverable {
         this.targetFile = checkNotNull(targetFile, "targetFile");
         this.tempFile = checkNotNull(tempFile, "tempFile");
         this.offset = offset;
+        this.cachedToString = "LocalRecoverable " + this.tempFile + " @ " + this.offset + " -> " + this.targetFile;
     }
 
     public File targetFile() {
@@ -67,6 +69,6 @@ class LocalRecoverable implements CommitRecoverable, ResumeRecoverable {
 
     @Override
     public String toString() {
-        return "LocalRecoverable " + tempFile + " @ " + offset + " -> " + targetFile;
+        return cachedToString;
     }
 }
