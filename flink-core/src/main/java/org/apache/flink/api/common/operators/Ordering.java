@@ -274,20 +274,31 @@ public class Ordering implements Cloneable {
     }
 
     public String toString() {
-        final StringBuilder buf = new StringBuilder("[");
-        for (int i = 0; i < indexes.size(); i++) {
+        final FieldList idx = this.indexes;
+        final ArrayList<Class<? extends Comparable<?>>> tps = this.types;
+        final ArrayList<Order> ords = this.orders;
+        final int n = idx.size();
+
+        // Estimate capacity to reduce StringBuilder reallocations. Use a modest per-entry estimate.
+        final int estimatedPerEntry = 16;
+        final int initialCapacity = Math.min(1024, 2 + n * estimatedPerEntry);
+        final StringBuilder buf = new StringBuilder(initialCapacity);
+
+        buf.append('[');
+        for (int i = 0; i < n; i++) {
             if (i != 0) {
-                buf.append(",");
+                buf.append(',');
             }
-            buf.append(this.indexes.get(i));
-            if (this.types.get(i) != null) {
-                buf.append(":");
-                buf.append(this.types.get(i).getName());
+            buf.append(idx.get(i));
+            final Class<? extends Comparable<?>> type = tps.get(i);
+            if (type != null) {
+                buf.append(':');
+                buf.append(type.getName());
             }
-            buf.append(":");
-            buf.append(this.orders.get(i).getShortName());
+            buf.append(':');
+            buf.append(ords.get(i).getShortName());
         }
-        buf.append("]");
+        buf.append(']');
         return buf.toString();
     }
 }
