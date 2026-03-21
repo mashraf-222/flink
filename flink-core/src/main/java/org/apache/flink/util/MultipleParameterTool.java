@@ -147,12 +147,16 @@ public class MultipleParameterTool extends AbstractParameterTool {
     public String get(String key) {
         addToDefaults(key, null);
         unrequestedParameters.remove(key);
-        if (!data.containsKey(key)) {
+
+        Collection<String> values = data.get(key);
+        if (values == null) {
             return null;
         }
+
         Preconditions.checkState(
-                data.get(key).size() == 1, "Key %s should has only one value.", key);
-        return (String) data.get(key).toArray()[0];
+                values.size() == 1, "Key %s should has only one value.", key);
+
+        return values.iterator().next();
     }
 
     /** Check if value is set. */
