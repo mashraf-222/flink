@@ -521,6 +521,9 @@ public class CoreOptions {
                                     + " directory and place a single result file into it. If the option is set to \"false\","
                                     + " the writer will directly create the file directly at the output path, without creating a containing"
                                     + " directory.");
+    private static final java.util.concurrent.ConcurrentMap<String, ConfigOption<Long>>
+                FILESYSTEM_CONNECTION_LIMIT_STREAM_INACTIVITY_TIMEOUT_CACHE =
+                        new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * The total number of input plus output connections that a file system for the given scheme may
@@ -555,17 +558,15 @@ public class CoreOptions {
         return ConfigOptions.key("fs." + scheme + ".limit.timeout").longType().defaultValue(0L);
     }
 
-    /**
-     * If any connection limit is configured, this option can be optionally set to define after
-     * which time (in milliseconds) inactive streams are reclaimed. This option can help to prevent
-     * that inactive streams make up the full pool of limited connections, and no further
-     * connections can be established. Unlimited timeout be default.
-     */
     public static ConfigOption<Long> fileSystemConnectionLimitStreamInactivityTimeout(
             String scheme) {
-        return ConfigOptions.key("fs." + scheme + ".limit.stream-timeout")
-                .longType()
-                .defaultValue(0L);
+        final String schemeKey = String.valueOf(scheme);
+        return FILESYSTEM_CONNECTION_LIMIT_STREAM_INACTIVITY_TIMEOUT_CACHE.computeIfAbsent(
+                schemeKey,
+                k ->
+                        ConfigOptions.key("fs." + k + ".limit.stream-timeout")
+                                .longType()
+                                .defaultValue(0L));
     }
 
     /**
