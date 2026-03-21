@@ -35,10 +35,14 @@ public class Deadline {
 
     /** Clock providing the time for this deadline. */
     private final Clock clock;
+    private final boolean isSystemClock;
 
     private Deadline(long deadline, Clock clock) {
         this.timeNanos = deadline;
         this.clock = clock;
+        // Cache whether this uses the SystemClock to avoid a virtual call in hot paths.
+        // Use identity comparison against the singleton instance for minimal overhead.
+        this.isSystemClock = (clock == SystemClock.getInstance());
     }
 
     public Deadline plus(Duration other) {
