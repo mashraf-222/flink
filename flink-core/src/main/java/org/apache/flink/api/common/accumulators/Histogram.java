@@ -69,7 +69,31 @@ public class Histogram implements Accumulator<Integer, TreeMap<Integer, Integer>
 
     @Override
     public String toString() {
-        return this.treeMap.toString();
+        // Fast path for empty map to avoid allocating a StringBuilder
+        if (this.treeMap.isEmpty()) {
+            return "{}";
+        }
+
+        // Estimate capacity to reduce StringBuilder growth; average of 16 chars per entry is a heuristic
+        int size = this.treeMap.size();
+        int estimatedCapacity = Math.min(1_000_000, Math.max(16, size * 16));
+        StringBuilder sb = new StringBuilder(estimatedCapacity);
+        sb.append('{');
+
+        boolean first = true;
+        for (Map.Entry<Integer, Integer> entry : this.treeMap.entrySet()) {
+            if (first) {
+                first = false;
+            } else {
+                sb.append(", ");
+            }
+            sb.append(String.valueOf(entry.getKey()));
+            sb.append('=');
+            sb.append(String.valueOf(entry.getValue()));
+        }
+
+        sb.append('}');
+        return sb.toString();
     }
 
     @Override
