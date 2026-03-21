@@ -118,7 +118,8 @@ public class Ordering implements Cloneable {
 
     @SuppressWarnings("unchecked")
     public Class<? extends Comparable<?>>[] getTypes() {
-        return this.types.toArray(new Class[this.types.size()]);
+        // Use the zero-length array idiom which is optimized in modern JVMs.
+        return this.types.toArray((Class<? extends Comparable<?>>[]) new Class[0]);
     }
 
     public int[] getFieldPositions() {
