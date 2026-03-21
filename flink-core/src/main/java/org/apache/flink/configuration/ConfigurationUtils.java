@@ -618,8 +618,32 @@ public class ConfigurationUtils {
 
     /** Filter condition for prefix map keys. */
     public static boolean filterPrefixMapKey(String key, String candidate) {
-        final String prefixKey = key + ".";
-        return candidate.startsWith(prefixKey);
+        // Preserve original behavior: if candidate is null, original would call candidate.startsWith(...)
+        // and thus throw NullPointerException. Mirror that behavior here.
+        if (candidate == null) {
+            throw new NullPointerException();
+        }
+
+        // Original code used (key + ".") which treats null key as "null.".
+        if (key == null) {
+            return candidate.startsWith("null.");
+        }
+
+        final int keyLen = key.length();
+        final int candLen = candidate.length();
+
+        // candidate must be strictly longer than key to contain key + '.'
+        if (candLen <= keyLen) {
+            return false;
+        }
+
+        // Fast fail if the character right after the key is not '.'
+        if (candidate.charAt(keyLen) != '.') {
+            return false;
+        }
+
+        // Compare candidate[0..keyLen) with key without allocating a new String
+        return candidate.regionMatches(0, key, 0, keyLen);
     }
 
     static Map<String, String> convertToPropertiesPrefixed(
