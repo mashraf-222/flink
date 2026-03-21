@@ -99,14 +99,20 @@ public class MultipleParameterTool extends AbstractParameterTool {
 
     // ------------------ ParameterUtil  ------------------------
     protected final Map<String, Collection<String>> data;
+    private final int parameterCount;
 
     private MultipleParameterTool(Map<String, Collection<String>> data) {
+        // Cache size once for reuse and for initial capacities.
+        int size = data.size();
+
         this.data = Collections.unmodifiableMap(new HashMap<>(data));
 
-        this.defaultData = new ConcurrentHashMap<>(data.size());
+        this.parameterCount = size;
+
+        this.defaultData = new ConcurrentHashMap<>(size);
 
         this.unrequestedParameters =
-                Collections.newSetFromMap(new ConcurrentHashMap<>(data.size()));
+                Collections.newSetFromMap(new ConcurrentHashMap<>(size));
 
         unrequestedParameters.addAll(data.keySet());
     }
@@ -135,7 +141,7 @@ public class MultipleParameterTool extends AbstractParameterTool {
     /** Returns number of parameters in {@link ParameterTool}. */
     @Override
     public int getNumberOfParameters() {
-        return data.size();
+        return parameterCount;
     }
 
     /**
