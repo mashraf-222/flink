@@ -263,9 +263,22 @@ public class ConfigurationUtils {
      * @return The dynamic parameter list {@code String}.
      */
     public static String assembleDynamicConfigsStr(final Map<String, String> config) {
-        return config.entrySet().stream()
-                .map(e -> String.format("-D %s=%s", e.getKey(), e.getValue()))
-                .collect(Collectors.joining(" "));
+        if (config.isEmpty()) {
+            return "";
+        }
+
+        // Pre-size StringBuilder to reduce reallocations. Estimate ~16 chars per entry plus margin.
+        StringBuilder sb = new StringBuilder(Math.max(16, config.size() * 16));
+        boolean first = true;
+        for (Map.Entry<String, String> e : config.entrySet()) {
+            if (!first) {
+                sb.append(' ');
+            } else {
+                first = false;
+            }
+            sb.append("-D ").append(e.getKey()).append('=').append(e.getValue());
+        }
+        return sb.toString();
     }
 
     @VisibleForTesting
