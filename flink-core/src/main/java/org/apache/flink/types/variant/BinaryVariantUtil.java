@@ -319,28 +319,38 @@ public class BinaryVariantUtil {
         switch (basicType) {
             case SHORT_STR:
                 return 1 + typeInfo;
-            case OBJECT:
-                return handleObject(
-                        value,
-                        pos,
-                        (size, idSize, offsetSize, idStart, offsetStart, dataStart) ->
-                                dataStart
-                                        - pos
-                                        + readUnsigned(
-                                                value,
-                                                offsetStart + size * offsetSize,
-                                                offsetSize));
-            case ARRAY:
-                return handleArray(
-                        value,
-                        pos,
-                        (size, offsetSize, offsetStart, dataStart) ->
-                                dataStart
-                                        - pos
-                                        + readUnsigned(
-                                                value,
-                                                offsetStart + size * offsetSize,
-                                                offsetSize));
+            case OBJECT: {
+                // Inlined object handling to avoid lambda allocation
+                // Refer to the comment of the `OBJECT` constant for the details of the object header
+                // encoding. Suppose `typeInfo` has a bit representation of 0_b4_b3b2_b1b0, the following
+                // line extracts b4 to determine whether the object uses a 1/4-byte size.
+                boolean largeSize = ((typeInfo >> 4) & 0x1) != 0;
+                int sizeBytes = (largeSize ? U32_SIZE : 1);
+                int size = readUnsigned(value, pos + 1, sizeBytes);
+                // Extracts b3b2 to determine the integer size of the field id list.
+                int idSize = ((typeInfo >> 2) & 0x3) + 1;
+                // Extracts b1b0 to determine the integer size of the offset list.
+                int offsetSize = (typeInfo & 0x3) + 1;
+                int idStart = pos + 1 + sizeBytes;
+                int offsetStart = idStart + size * idSize;
+                int dataStart = offsetStart + (size + 1) * offsetSize;
+                return dataStart - pos + readUnsigned(value, offsetStart + size * offsetSize, offsetSize);
+            }
+            case ARRAY: {
+                // Inlined array handling to avoid lambda allocation
+                // Refer to the comment of the `ARRAY` constant for the details of the object header
+                // encoding.
+                // Suppose `typeInfo` has a bit representation of 000_b2_b1b0, the following line extracts
+                // b2 to determine whether the object uses a 1/4-byte size.
+                boolean largeSize = ((typeInfo >> 2) & 0x1) != 0;
+                int sizeBytes = (largeSize ? U32_SIZE : 1);
+                int size = readUnsigned(value, pos + 1, sizeBytes);
+                // Extracts b1b0 to determine the integer size of the offset list.
+                int offsetSize = (typeInfo & 0x3) + 1;
+                int offsetStart = pos + 1 + sizeBytes;
+                int dataStart = offsetStart + (size + 1) * offsetSize;
+                return dataStart - pos + readUnsigned(value, offsetStart + size * offsetSize, offsetSize);
+            }
             default:
                 switch (typeInfo) {
                     case NULL:
