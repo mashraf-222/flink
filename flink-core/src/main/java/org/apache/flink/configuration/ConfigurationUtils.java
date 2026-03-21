@@ -317,17 +317,40 @@ public class ConfigurationUtils {
         final String maxDirect = "-XX:MaxDirectMemorySize=";
         final String maxMetadata = "-XX:MaxMetaspaceSize=";
 
-        Map<String, String> configs = new HashMap<>();
-        for (String paramStr : jvmParamsStr.split(" ")) {
-            if (paramStr.startsWith(xmx)) {
-                configs.put(xmx, paramStr.substring(xmx.length()));
-            } else if (paramStr.startsWith(xms)) {
-                configs.put(xms, paramStr.substring(xms.length()));
-            } else if (paramStr.startsWith(maxDirect)) {
-                configs.put(maxDirect, paramStr.substring(maxDirect.length()));
-            } else if (paramStr.startsWith(maxMetadata)) {
-                configs.put(maxMetadata, paramStr.substring(maxMetadata.length()));
+        // Pre-size expected small map to avoid rehashing.
+        Map<String, String> configs = new HashMap<>(4);
+
+        int len = jvmParamsStr.length();
+        int i = 0;
+
+        final int xmxLen = xmx.length();
+        final int xmsLen = xms.length();
+        final int maxDirectLen = maxDirect.length();
+        final int maxMetadataLen = maxMetadata.length();
+
+        while (i < len) {
+            // find end of token (space-separated)
+            int j = i;
+            while (j < len && jvmParamsStr.charAt(j) != ' ') {
+                j++;
             }
+
+            if (j > i) { // non-empty token
+                int tokenLen = j - i;
+                // Check prefixes using regionMatches to avoid creating intermediate Strings
+                if (tokenLen >= xmxLen && jvmParamsStr.regionMatches(i, xmx, 0, xmxLen)) {
+                    configs.put(xmx, jvmParamsStr.substring(i + xmxLen, j));
+                } else if (tokenLen >= xmsLen && jvmParamsStr.regionMatches(i, xms, 0, xmsLen)) {
+                    configs.put(xms, jvmParamsStr.substring(i + xmsLen, j));
+                } else if (tokenLen >= maxDirectLen && jvmParamsStr.regionMatches(i, maxDirect, 0, maxDirectLen)) {
+                    configs.put(maxDirect, jvmParamsStr.substring(i + maxDirectLen, j));
+                } else if (tokenLen >= maxMetadataLen && jvmParamsStr.regionMatches(i, maxMetadata, 0, maxMetadataLen)) {
+                    configs.put(maxMetadata, jvmParamsStr.substring(i + maxMetadataLen, j));
+                }
+            }
+
+            // move to start of next token (skip the single space)
+            i = j + 1;
         }
 
         checkArgument(configs.containsKey(xmx));
