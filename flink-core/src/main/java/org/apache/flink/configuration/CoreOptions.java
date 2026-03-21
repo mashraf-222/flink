@@ -218,7 +218,33 @@ public class CoreOptions {
 
     @Internal
     public static String[] mergeListsToArray(List<String> base, List<String> append) {
-        return Iterables.toArray(Iterables.concat(base, append), String.class);
+        // Preserve original NPE behavior: if base or append is null, throw NPE via .size()
+        final int baseSize = base.size();
+        final int appendSize = append.size();
+        final String[] result = new String[baseSize + appendSize];
+
+        int idx = 0;
+        if (base instanceof java.util.RandomAccess) {
+            for (int i = 0; i < baseSize; i++) {
+                result[idx++] = base.get(i);
+            }
+        } else {
+            for (String s : base) {
+                result[idx++] = s;
+            }
+        }
+
+        if (append instanceof java.util.RandomAccess) {
+            for (int i = 0; i < appendSize; i++) {
+                result[idx++] = append.get(i);
+            }
+        } else {
+            for (String s : append) {
+                result[idx++] = s;
+            }
+        }
+
+        return result;
     }
 
     // ------------------------------------------------------------------------
