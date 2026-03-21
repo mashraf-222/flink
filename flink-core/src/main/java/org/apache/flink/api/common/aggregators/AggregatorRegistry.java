@@ -49,10 +49,17 @@ public class AggregatorRegistry {
     }
 
     public Collection<AggregatorWithName<?>> getAllRegisteredAggregators() {
-        ArrayList<AggregatorWithName<?>> list =
-                new ArrayList<AggregatorWithName<?>>(this.registry.size());
+        final Map<String, Aggregator<?>> localRegistry = this.registry;
+        final int size = localRegistry.size();
+        final ArrayList<AggregatorWithName<?>> list =
+                new ArrayList<AggregatorWithName<?>>(size);
 
-        for (Map.Entry<String, Aggregator<?>> entry : this.registry.entrySet()) {
+        if (size == 0) {
+            return list;
+        }
+
+        final Iterable<Map.Entry<String, Aggregator<?>>> entries = localRegistry.entrySet();
+        for (Map.Entry<String, Aggregator<?>> entry : entries) {
             @SuppressWarnings("unchecked")
             Aggregator<Value> valAgg = (Aggregator<Value>) entry.getValue();
             list.add(new AggregatorWithName<>(entry.getKey(), valAgg));
