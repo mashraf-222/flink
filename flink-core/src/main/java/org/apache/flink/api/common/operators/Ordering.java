@@ -134,9 +134,12 @@ public class Ordering implements Cloneable {
     }
 
     public boolean[] getFieldSortDirections() {
-        final boolean[] directions = new boolean[this.orders.size()];
-        for (int i = 0; i < directions.length; i++) {
-            directions[i] = this.orders.get(i) != Order.DESCENDING;
+        final int n = this.orders.size();
+        final boolean[] directions = new boolean[n];
+        final ArrayList<Order> ordersLocal = this.orders;
+        final Order desc = Order.DESCENDING;
+        for (int i = 0; i < n; i++) {
+            directions[i] = ordersLocal.get(i) != desc;
         }
         return directions;
     }
