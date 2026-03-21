@@ -103,7 +103,135 @@ public class SqlDateParser extends FieldParser<Date> {
                     "There is leading or trailing whitespace in the numeric field.");
         }
 
-        final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
-        return Date.valueOf(str);
+        // Empty field: preserve original behavior (Date.valueOf("") throws IllegalArgumentException)
+        if (limitedLen == 0) {
+            return Date.valueOf("");
+        }
+
+        final int end = startPos + limitedLen;
+
+        // Find the two separators '-' while accounting for optional sign on the year.
+        int scan = startPos;
+        if (bytes[scan] == '+' || bytes[scan] == '-') {
+            scan++; // skip leading sign of year
+            if (scan >= end) {
+                // malformed, let fall through to error
+                throw new IllegalArgumentException("Invalid date format");
+            }
+        }
+
+        int firstSep = -1;
+        for (int i = scan; i < end; i++) {
+            if (bytes[i] == '-') {
+                firstSep = i;
+                break;
+            }
+        }
+        if (firstSep == -1) {
+            throw new IllegalArgumentException("Invalid date format");
+        }
+
+        int secondSep = -1;
+        for (int i = firstSep + 1; i < end; i++) {
+            if (bytes[i] == '-') {
+                secondSep = i;
+                break;
+            }
+        }
+        if (secondSep == -1) {
+            throw new IllegalArgumentException("Invalid date format");
+        }
+
+        // Segments: year = [startPos, firstSep), month = (firstSep, secondSep), day = (secondSep, end)
+        int yearLen = firstSep - startPos;
+        int monthLen = secondSep - firstSep - 1;
+        int dayLen = end - secondSep - 1;
+
+        if (yearLen <= 0 || monthLen <= 0 || dayLen <= 0) {
+            throw new IllegalArgumentException("Invalid date format");
+        }
+
+        final int year = parseIntFromBytes(bytes, startPos, yearLen, true);
+        final int month = parseIntFromBytes(bytes, firstSep + 1, monthLen, false);
+        final int day = parseIntFromBytes(bytes, secondSep + 1, dayLen, false);
+
+        // Basic range checks for month/day to avoid unnecessary exceptions from LocalDate/of.
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("Invalid month value: " + month);
+        }
+        if (day < 1) {
+            throw new IllegalArgumentException("Invalid day value: " + day);
+        }
+        int maxDay = maxDayOfMonth(year, month);
+        if (day > maxDay) {
+            throw new IllegalArgumentException("Invalid day value: " + day);
+        }
+
+        try {
+            java.time.LocalDate ld = java.time.LocalDate.of(year, month, day);
+            return Date.valueOf(ld);
+        } catch (java.time.DateTimeException dte) {
+            // Preserve exception type similar to Date.valueOf(String)
+            throw new IllegalArgumentException(dte);
+        }
     }
+
+    private static int parseIntFromBytes(byte[] bytes, int offset, int len, boolean allowSign) {
+        if (len <= 0) {
+            throw new IllegalArgumentException("Invalid integer format");
+        }
+        int i = offset;
+        int end = offset + len;
+        int sign = 1;
+        int result = 0;
+
+        byte b = bytes[i];
+        if (allowSign && (b == '+' || b == '-')) {
+            if (b == '-') {
+                sign = -1;
+            }
+            i++;
+            if (i >= end) {
+                throw new IllegalArgumentException("Invalid integer format");
+            }
+        }
+
+        for (; i < end; i++) {
+            b = bytes[i];
+            int digit = b - '0';
+            if (digit < 0 || digit > 9) {
+                throw new IllegalArgumentException("Invalid integer format");
+            }
+            result = result * 10 + digit;
+        }
+        return result * sign;
+    }
+
+    private static int maxDayOfMonth(int year, int month) {
+        switch (month) {
+            case 1:
+            case 3:
+            case 5:
+            case 7:
+            case 8:
+            case 10:
+            case 12:
+                return 31;
+            case 4:
+            case 6:
+            case 9:
+            case 11:
+                return 30;
+            case 2:
+                return isLeapYear(year) ? 29 : 28;
+            default:
+                throw new IllegalArgumentException("Invalid month value: " + month);
+        }
+    }
+
+    private static boolean isLeapYear(int year) {
+        // Proleptic Gregorian rule (same as java.time.LocalDate)
+        return (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0));
+    }
+
 }
