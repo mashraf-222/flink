@@ -493,7 +493,16 @@ public class BinaryVariantUtil {
         if (basicType != PRIMITIVE || typeInfo != FLOAT) {
             throw unexpectedType(Type.FLOAT);
         }
-        return Float.intBitsToFloat((int) readLong(value, pos + 1, 4));
+        // Inline the 4-byte little-endian read to avoid the overhead of readLong for this hot path.
+        // Read bytes at positions pos+1 .. pos+4 (little-endian), with sign extension on the most significant byte.
+        checkIndex(pos + 1, value.length);
+        checkIndex(pos + 4, value.length);
+        int b0 = value[pos + 1] & 0xFF;
+        int b1 = (value[pos + 2] & 0xFF) << 8;
+        int b2 = (value[pos + 3] & 0xFF) << 16;
+        int b3 = (value[pos + 4]) << 24; // sign-extended
+        int intBits = b0 | b1 | b2 | b3;
+        return Float.intBitsToFloat(intBits);
     }
 
     // Get a binary value from variant value `value[pos...]`.
