@@ -37,6 +37,7 @@ public class Ordering implements Cloneable {
             new ArrayList<Class<? extends Comparable<?>>>();
 
     protected final ArrayList<Order> orders = new ArrayList<Order>();
+    private final java.util.HashSet<Integer> indexSet = new java.util.HashSet<Integer>(4);
 
     // --------------------------------------------------------------------------------------------
 
@@ -74,10 +75,13 @@ public class Ordering implements Cloneable {
                     "An ordering must not be created with a NONE order.");
         }
 
-        if (!this.indexes.contains(index)) {
+        // Fast-path membership test using cached HashSet
+        if (!this.indexSet.contains(index)) {
+            // Maintain compatibility with existing FieldList behavior
             this.indexes = this.indexes.addField(index);
             this.types.add(type);
             this.orders.add(order);
+            this.indexSet.add(index);
         }
 
         return this;
