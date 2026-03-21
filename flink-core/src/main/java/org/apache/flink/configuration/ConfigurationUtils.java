@@ -638,12 +638,31 @@ public class ConfigurationUtils {
     }
 
     static boolean removePrefixMap(Map<String, Object> confData, String key) {
-        final List<String> prefixKeys =
-                confData.keySet().stream()
-                        .filter(candidate -> filterPrefixMapKey(key, candidate))
-                        .collect(Collectors.toList());
-        prefixKeys.forEach(confData::remove);
-        return !prefixKeys.isEmpty();
+        // Compute prefix once to avoid repeated concatenation in hot paths.
+        final String prefixKey = key + ".";
+
+        // Collect matching keys in a local list using a simple for-loop (faster and avoids stream overhead).
+        // Use a concrete ArrayList without adding new imports by referring to the fully-qualified name.
+        final java.util.List<String> keysToRemove = new java.util.ArrayList<>();
+        for (String candidate : confData.keySet()) {
+            // Preserve original behavior: candidate.startsWith(prefixKey) will throw NPE if candidate is null,
+            // just like the previous implementation that delegated to filterPrefixMapKey.
+            if (candidate.startsWith(prefixKey)) {
+                keysToRemove.add(candidate);
+            }
+        }
+
+        if (keysToRemove.isEmpty()) {
+            return false;
+        }
+
+        // Remove entries by calling Map.remove for each key to preserve behavior for Map implementations
+        // where iterator.remove() may be unsupported (matching original implementation's semantics).
+        for (String removeKey : keysToRemove) {
+            confData.remove(removeKey);
+        }
+
+        return true;
     }
 
     // Make sure that we cannot instantiate this class
