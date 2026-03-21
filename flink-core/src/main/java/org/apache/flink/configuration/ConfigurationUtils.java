@@ -194,9 +194,78 @@ public class ConfigurationUtils {
 
     @Nonnull
     public static String[] splitPaths(@Nonnull String separatedPaths) {
-        return separatedPaths.length() > 0
-                ? separatedPaths.split(",|" + File.pathSeparator)
-                : EMPTY;
+        if (separatedPaths.length() == 0) {
+            return EMPTY;
+        }
+
+        final String ps = File.pathSeparator;
+        final int psLen = ps.length();
+
+        // Fast path for common single-character path separator (e.g. ':' or ';')
+        if (psLen == 1) {
+            final char psChar = ps.charAt(0);
+            final int len = separatedPaths.length();
+            final java.util.ArrayList<String> parts = new java.util.ArrayList<>();
+            int start = 0;
+            for (int i = 0; i < len; i++) {
+                final char c = separatedPaths.charAt(i);
+                if (c == ',' || c == psChar) {
+                    parts.add(separatedPaths.substring(start, i));
+                    start = i + 1;
+                }
+            }
+            // add remaining segment
+            parts.add(separatedPaths.substring(start));
+
+            // remove trailing empty strings to match String.split(regex) behavior
+            int sz = parts.size();
+            while (sz > 0 && parts.get(sz - 1).isEmpty()) {
+                parts.remove(--sz);
+            }
+            if (sz == 0) {
+                return EMPTY;
+            }
+            return parts.toArray(new String[sz]);
+        } else {
+            // Rare case: multi-character path separator; use indexOf-based scanning.
+            final int len = separatedPaths.length();
+            final java.util.ArrayList<String> parts = new java.util.ArrayList<>();
+            int start = 0;
+            while (start <= len) {
+                final int nextComma = separatedPaths.indexOf(',', start);
+                final int nextPS = separatedPaths.indexOf(ps, start);
+                int pos;
+                int matchLen;
+                if (nextComma == -1 && nextPS == -1) {
+                    parts.add(separatedPaths.substring(start));
+                    break;
+                } else if (nextComma == -1) {
+                    pos = nextPS;
+                    matchLen = psLen;
+                } else if (nextPS == -1) {
+                    pos = nextComma;
+                    matchLen = 1;
+                } else if (nextComma < nextPS) {
+                    pos = nextComma;
+                    matchLen = 1;
+                } else {
+                    pos = nextPS;
+                    matchLen = psLen;
+                }
+                parts.add(separatedPaths.substring(start, pos));
+                start = pos + matchLen;
+            }
+
+            // remove trailing empty strings to match String.split(regex) behavior
+            int sz = parts.size();
+            while (sz > 0 && parts.get(sz - 1).isEmpty()) {
+                parts.remove(--sz);
+            }
+            if (sz == 0) {
+                return EMPTY;
+            }
+            return parts.toArray(new String[sz]);
+        }
     }
 
     /**
