@@ -92,12 +92,26 @@ public final class SetSerializer<T> extends TypeSerializer<Set<T>> {
 
     @Override
     public Set<T> copy(Set<T> from) {
-        Set<T> newSet = new HashSet<>(from.size());
-        for (T element : from) {
-            T newElement = element == null ? null : elementSerializer.copy(element);
-            newSet.add(newElement);
+        // Cache local references for hot path performance.
+        final TypeSerializer<T> elemSer = this.elementSerializer;
+
+        final int size = from.size();
+        // Compute capacity to avoid rehashing: capacity = max(16, ceil(size / loadFactor))
+        final int capacity = Math.max(16, (int) (size / 0.75f) + 1);
+
+        if (elemSer.isImmutableType()) {
+            // Fast path: immutable elements don't need per-element copying.
+            Set<T> newSet = new HashSet<>(capacity);
+            newSet.addAll(from);
+            return newSet;
+        } else {
+            Set<T> newSet = new HashSet<>(capacity);
+            for (T element : from) {
+                T newElement = element == null ? null : elemSer.copy(element);
+                newSet.add(newElement);
+            }
+            return newSet;
         }
-        return newSet;
     }
 
     @Override
