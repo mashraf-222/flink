@@ -152,21 +152,28 @@ public class AccumulatorHelper {
     }
 
     public static String getResultsFormatted(Map<String, Object> map) {
-        StringBuilder builder = new StringBuilder();
+        // Pre-size the builder to reduce resizes. Use a modest per-entry estimate.
+        int size = map.size();
+        StringBuilder builder = new StringBuilder(Math.max(16, size * 80));
+        String lineSep = System.lineSeparator();
+
         for (Map.Entry<String, Object> entry : map.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
             builder.append("- ")
-                    .append(entry.getKey())
+                    .append(key)
                     .append(" (")
-                    .append(entry.getValue().getClass().getName())
+                    .append(value.getClass().getName())
                     .append(")");
-            if (entry.getValue() instanceof Collection) {
+            if (value instanceof Collection) {
                 builder.append(" [")
-                        .append(((Collection) entry.getValue()).size())
+                        .append(((Collection<?>) value).size())
                         .append(" elements]");
             } else {
-                builder.append(": ").append(entry.getValue().toString());
+                builder.append(": ").append(value.toString());
             }
-            builder.append(System.lineSeparator());
+            builder.append(lineSep);
         }
         return builder.toString();
     }
