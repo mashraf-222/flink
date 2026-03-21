@@ -45,12 +45,104 @@ public class SqlDateParser extends FieldParser<Date> {
             return -1;
         }
 
-        String str =
-                new String(bytes, startPos, endPos - startPos, ConfigConstants.DEFAULT_CHARSET);
+        // Fast path: parse yyyy-mm-dd directly from bytes to avoid allocating a String.
+        final int len = endPos - startPos;
+        if (len == 0) {
+            setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+            return -1;
+        }
+
+        int i = startPos;
+        final int end = endPos;
+
+        // Parse year (allow optional leading '-')
+        boolean negativeYear = false;
+        if (bytes[i] == '-') {
+            negativeYear = true;
+            i++;
+            if (i == end) {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+        }
+
+        int year = 0;
+        int yearStart = i;
+        while (i < end) {
+            int b = bytes[i];
+            if (b < '0' || b > '9') {
+                break;
+            }
+            year = year * 10 + (b - '0');
+            i++;
+        }
+        if (i == yearStart) {
+            setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+            return -1;
+        }
+        if (negativeYear) {
+            year = -year;
+        }
+
+        // Expect '-'
+        if (i >= end || bytes[i] != '-') {
+            setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+            return -1;
+        }
+        i++; // skip '-'
+
+        // Parse month
+        int month = 0;
+        int monthStart = i;
+        while (i < end) {
+            int b = bytes[i];
+            if (b < '0' || b > '9') {
+                break;
+            }
+            month = month * 10 + (b - '0');
+            i++;
+        }
+        if (i == monthStart) {
+            setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+            return -1;
+        }
+
+        // Expect '-'
+        if (i >= end || bytes[i] != '-') {
+            setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+            return -1;
+        }
+        i++; // skip '-'
+
+        // Parse day
+        int day = 0;
+        int dayStart = i;
+        while (i < end) {
+            int b = bytes[i];
+            if (b < '0' || b > '9') {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            day = day * 10 + (b - '0');
+            i++;
+        }
+        if (i == dayStart) {
+            setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+            return -1;
+        }
+
+        // Ensure we've consumed exactly the field
+        if (i != end) {
+            setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+            return -1;
+        }
+
         try {
-            this.result = Date.valueOf(str);
+            // Validate and build the date. Use fully-qualified LocalDate to avoid adding imports.
+            this.result = Date.valueOf(java.time.LocalDate.of(year, month, day));
             return (endPos == limit) ? limit : endPos + delimiter.length;
-        } catch (IllegalArgumentException e) {
+        } catch (RuntimeException e) {
+            // Matches original behavior which catches IllegalArgumentException from Date.valueOf(str)
             setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
             return -1;
         }
