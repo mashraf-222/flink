@@ -625,12 +625,25 @@ public class ConfigurationUtils {
     static Map<String, String> convertToPropertiesPrefixed(
             Map<String, Object> confData, String key) {
         final String prefixKey = key + ".";
-        return confData.keySet().stream()
-                .filter(k -> k.startsWith(prefixKey))
-                .collect(
-                        Collectors.toMap(
-                                k -> k.substring(prefixKey.length()),
-                                k -> convertToString(confData.get(k))));
+        final int prefixLen = prefixKey.length();
+
+        // Pre-size the HashMap to reduce rehashing. Use confData.size() as an upper bound.
+        Map<String, String> result = new HashMap<>((int) (confData.size() / 0.75f) + 1);
+
+        for (Map.Entry<String, Object> entry : confData.entrySet()) {
+            String k = entry.getKey();
+            if (k.startsWith(prefixKey)) {
+                String suffix = k.substring(prefixLen);
+                String value = convertToString(entry.getValue());
+                String previous = result.put(suffix, value);
+                if (previous != null) {
+                    // Preserve the original Collectors.toMap behavior of throwing on duplicate keys.
+                    throw new IllegalStateException("Duplicate key " + suffix);
+                }
+            }
+        }
+
+        return result;
     }
 
     static boolean containsPrefixMap(Map<String, Object> confData, String key) {
