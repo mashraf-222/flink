@@ -203,12 +203,27 @@ public abstract class AbstractParameterTool extends ExecutionConfig.GlobalJobPar
      * cases.
      */
     public boolean getBoolean(String key, boolean defaultValue) {
-        addToDefaults(key, Boolean.toString(defaultValue));
+        // Inline the small default-registration logic to avoid allocating Boolean.toString when not needed
+        // and to avoid an extra map lookup in addToDefaults.
+        final Map<String, String> dd = this.defaultData;
+        // Preserve original NPE behavior when defaultData is null by letting dd.get(...) throw.
+        String currentValue = dd.get(key);
+        if (currentValue == null) {
+            // only create the default string when we actually need to insert/update the map
+            String defaultStr = Boolean.toString(defaultValue);
+            dd.put(key, defaultStr);
+        } else if (currentValue.equals(DEFAULT_UNDEFINED)) {
+            // update undefined marker with a better default
+            String defaultStr = Boolean.toString(defaultValue);
+            dd.put(key, defaultStr);
+        }
+
         String value = get(key);
         if (value == null) {
             return defaultValue;
         } else {
-            return Boolean.valueOf(value);
+            // parseBoolean avoids boxing that Boolean.valueOf would introduce
+            return Boolean.parseBoolean(value);
         }
     }
 
