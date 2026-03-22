@@ -46,12 +46,223 @@ public class SqlTimestampParser extends FieldParser<Timestamp> {
             return -1;
         }
 
-        String str =
-                new String(bytes, startPos, endPos - startPos, ConfigConstants.DEFAULT_CHARSET);
+        // Fast path: parse numeric fields directly from the byte array without creating a String.
+        int idx = startPos;
         try {
-            this.result = Timestamp.valueOf(str);
-            return (endPos == limit) ? limit : endPos + delimiter.length;
-        } catch (IllegalArgumentException e) {
+            // year: digits until '-'
+            if (idx >= endPos) {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            int year = 0;
+            int digitCount = 0;
+            while (idx < endPos) {
+                int ch = bytes[idx];
+                if (ch == '-') {
+                    break;
+                }
+                int d = ch - '0';
+                if (d < 0 || d > 9) {
+                    setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                    return -1;
+                }
+                year = year * 10 + d;
+                digitCount++;
+                idx++;
+            }
+            if (digitCount == 0 || idx >= endPos || bytes[idx] != '-') {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            idx++; // skip '-'
+
+            // month: digits until '-'
+            if (idx >= endPos) {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            int month = 0;
+            digitCount = 0;
+            while (idx < endPos) {
+                int ch = bytes[idx];
+                if (ch == '-') {
+                    break;
+                }
+                int d = ch - '0';
+                if (d < 0 || d > 9) {
+                    setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                    return -1;
+                }
+                month = month * 10 + d;
+                digitCount++;
+                idx++;
+            }
+            if (digitCount == 0 || idx >= endPos || bytes[idx] != '-') {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            idx++; // skip '-'
+
+            // day: digits until ' ' (space)
+            if (idx >= endPos) {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            int day = 0;
+            digitCount = 0;
+            while (idx < endPos) {
+                int ch = bytes[idx];
+                if (ch == ' ') {
+                    break;
+                }
+                int d = ch - '0';
+                if (d < 0 || d > 9) {
+                    setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                    return -1;
+                }
+                day = day * 10 + d;
+                digitCount++;
+                idx++;
+            }
+            if (digitCount == 0 || idx >= endPos || bytes[idx] != ' ') {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            idx++; // skip space
+
+            // hour: digits until ':'
+            if (idx >= endPos) {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            int hour = 0;
+            digitCount = 0;
+            while (idx < endPos) {
+                int ch = bytes[idx];
+                if (ch == ':') {
+                    break;
+                }
+                int d = ch - '0';
+                if (d < 0 || d > 9) {
+                    setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                    return -1;
+                }
+                hour = hour * 10 + d;
+                digitCount++;
+                idx++;
+            }
+            if (digitCount == 0 || idx >= endPos || bytes[idx] != ':') {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            idx++; // skip ':'
+
+            // minute: digits until ':'
+            if (idx >= endPos) {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            int minute = 0;
+            digitCount = 0;
+            while (idx < endPos) {
+                int ch = bytes[idx];
+                if (ch == ':') {
+                    break;
+                }
+                int d = ch - '0';
+                if (d < 0 || d > 9) {
+                    setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                    return -1;
+                }
+                minute = minute * 10 + d;
+                digitCount++;
+                idx++;
+            }
+            if (digitCount == 0 || idx >= endPos || bytes[idx] != ':') {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            idx++; // skip ':'
+
+            // second: digits until '.' or end
+            if (idx >= endPos) {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+            int second = 0;
+            digitCount = 0;
+            while (idx < endPos) {
+                int ch = bytes[idx];
+                if (ch == '.' ) {
+                    break;
+                }
+                int d = ch - '0';
+                if (d < 0 || d > 9) {
+                    setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                    return -1;
+                }
+                second = second * 10 + d;
+                digitCount++;
+                idx++;
+            }
+            if (digitCount == 0) {
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+
+            int nanos = 0;
+            if (idx < endPos && bytes[idx] == '.') {
+                idx++; // skip '.'
+                int nanoDigits = 0;
+                // Read up to 9 digits for nanoseconds; if more, we consume them but only use first 9 (padding/truncating behavior)
+                while (idx < endPos) {
+                    int ch = bytes[idx];
+                    int d = ch - '0';
+                    if (d < 0 || d > 9) {
+                        setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                        return -1;
+                    }
+                    if (nanoDigits < 9) {
+                        nanos = nanos * 10 + d;
+                    } else {
+                        // just consume extra fractional digits without expanding nanos beyond 9 digits
+                    }
+                    nanoDigits++;
+                    idx++;
+                }
+                if (nanoDigits == 0) {
+                    setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                    return -1;
+                }
+                // If less than 9 digits, scale
+                if (nanoDigits < 9) {
+                    for (int i = nanoDigits; i < 9; i++) {
+                        nanos *= 10;
+                    }
+                } else if (nanoDigits > 9) {
+                    // If more than 9 digits, the above loop already truncated to first 9 digits.
+                    // No further action needed.
+                }
+            } else if (idx != endPos) {
+                // Unexpected trailing characters
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+
+            // Build LocalDateTime and then a Timestamp to preserve the same semantics as Timestamp.valueOf(String).
+            try {
+                java.time.LocalDateTime ldt = java.time.LocalDateTime.of(
+                        year, month, day, hour, minute, second, nanos);
+                // Convert LocalDateTime to Timestamp
+                this.result = Timestamp.valueOf(ldt);
+                return (endPos == limit) ? limit : endPos + delimiter.length;
+            } catch (RuntimeException e) {
+                // Covers java.time.DateTimeException and other runtime errors that indicate invalid date/time
+                setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+                return -1;
+            }
+        } catch (IndexOutOfBoundsException | ArithmeticException e) {
+            // Defensive: if any unexpected index/overflow occurs, treat as format error
             setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
             return -1;
         }
