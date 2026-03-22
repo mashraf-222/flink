@@ -40,7 +40,9 @@ public class OptionalUtils {
     /** Returns the first {@link Optional} which is present. */
     @SafeVarargs
     public static <T> Optional<T> firstPresent(Optional<T>... opts) {
-        for (Optional<T> opt : opts) {
+        final Optional<T>[] a = opts;
+        for (int i = 0, len = a.length; i < len; i++) {
+            Optional<T> opt = a[i];
             if (opt.isPresent()) {
                 return opt;
             }
