@@ -72,12 +72,32 @@ final class CombinedWatermarkStatus {
         long minimumOverAllActiveOutputs = Long.MAX_VALUE;
 
         boolean allIdle = true;
-        for (PartialWatermark partialWatermark : partialWatermarks) {
+
+        // Local cache of current combined watermark to enable fast early-exit checks.
+        final long currentCombined = this.combinedWatermark;
+
+        // Use index-based loop to avoid iterator overhead and inline min/max logic.
+        final int size = partialWatermarks.size();
+        for (int i = 0; i < size; i++) {
+            final PartialWatermark partialWatermark = partialWatermarks.get(i);
             final long watermark = partialWatermark.getWatermark();
-            maximumOverAllOutputs = Math.max(maximumOverAllOutputs, watermark);
+
+            if (watermark > maximumOverAllOutputs) {
+                maximumOverAllOutputs = watermark;
+            }
+
             if (!partialWatermark.isIdle()) {
-                minimumOverAllActiveOutputs = Math.min(minimumOverAllActiveOutputs, watermark);
                 allIdle = false;
+                if (watermark < minimumOverAllActiveOutputs) {
+                    minimumOverAllActiveOutputs = watermark;
+                    // Early exit: if the minimum across seen active outputs is already
+                    // not greater than the current combined watermark, the combined
+                    // watermark cannot increase; we can stop scanning.
+                    if (minimumOverAllActiveOutputs <= currentCombined) {
+                        this.idle = false;
+                        return false;
+                    }
+                }
             }
         }
 
