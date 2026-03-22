@@ -41,11 +41,13 @@ public class ListTypeInfo<T> extends TypeInformation<List<T>> {
     private final TypeInformation<T> elementTypeInfo;
 
     public ListTypeInfo(Class<T> elementTypeClass) {
-        this.elementTypeInfo = of(checkNotNull(elementTypeClass, "elementTypeClass"));
+        final Class<T> checked = checkNotNull(elementTypeClass, "elementTypeClass");
+        this.elementTypeInfo = TypeInformation.of(checked);
     }
 
     public ListTypeInfo(TypeInformation<T> elementTypeInfo) {
-        this.elementTypeInfo = checkNotNull(elementTypeInfo, "elementTypeInfo");
+        final TypeInformation<T> checked = checkNotNull(elementTypeInfo, "elementTypeInfo");
+        this.elementTypeInfo = checked;
     }
 
     // ------------------------------------------------------------------------
