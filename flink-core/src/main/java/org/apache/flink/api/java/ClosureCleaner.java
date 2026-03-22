@@ -280,6 +280,14 @@ class This0AccessFinder extends ClassVisitor {
 
     private final String this0Name;
     private boolean isThis0Accessed;
+    private final MethodVisitor methodVisitor = new MethodVisitor(Opcodes.ASM9) {
+            @Override
+            public void visitFieldInsn(int op, String owner, String name, String desc) {
+                if (!isThis0Accessed && op == Opcodes.GETFIELD && this0Name.equals(name)) {
+                    isThis0Accessed = true;
+                }
+            }
+        };
 
     public This0AccessFinder(String this0Name) {
         super(Opcodes.ASM9);
@@ -293,14 +301,7 @@ class This0AccessFinder extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(
             int access, String name, String desc, String sig, String[] exceptions) {
-        return new MethodVisitor(Opcodes.ASM9) {
-
-            @Override
-            public void visitFieldInsn(int op, String owner, String name, String desc) {
-                if (op == Opcodes.GETFIELD && name.equals(this0Name)) {
-                    isThis0Accessed = true;
-                }
-            }
-        };
+        // If we've already found the access, skip visiting further methods to save time.
+        return isThis0Accessed ? null : methodVisitor;
     }
 }
