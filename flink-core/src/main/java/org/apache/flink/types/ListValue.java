@@ -311,7 +311,14 @@ public abstract class ListValue<V extends Value> implements Value, List<V> {
      */
     @Override
     public V set(final int index, final V element) {
-        return this.list.set(index, element);
+        // Cache the field in a local variable to avoid repeated volatile/field access
+        final List<V> l = this.list;
+        // Fast-path for the common concrete implementation to reduce virtual dispatch overhead
+        if (l instanceof ArrayList) {
+            return ((ArrayList<V>) l).set(index, element);
+        } else {
+            return l.set(index, element);
+        }
     }
 
     /*
