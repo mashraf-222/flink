@@ -32,8 +32,18 @@ public class IntPrimitiveArrayComparator extends PrimitiveArrayComparator<int[],
     @Override
     public int hash(int[] record) {
         int result = 0;
-        for (int field : record) {
-            result += field;
+        int[] r = record; // preserve NPE behavior when record is null
+        int len = r.length;
+        int i = 0;
+        int limit = len - (len & 3); // process in chunks of 4
+        while (i < limit) {
+            result += r[i++];
+            result += r[i++];
+            result += r[i++];
+            result += r[i++];
+        }
+        while (i < len) {
+            result += r[i++];
         }
         return result;
     }
