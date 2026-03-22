@@ -24,14 +24,24 @@ import java.util.Arrays;
 public final class TypeSerializerUtils {
 
     /** Takes snapshots of the given serializers. */
+    @SuppressWarnings("unchecked")
     public static TypeSerializerSnapshot<?>[] snapshot(
             TypeSerializer<?>... originatingSerializers) {
 
-        return Arrays.stream(originatingSerializers)
-                .map(
-                        (TypeSerializer<?> originatingSerializer) ->
-                                originatingSerializer.snapshotConfiguration())
-                .toArray(TypeSerializerSnapshot[]::new);
+        // Maintain the same NullPointerException behavior as Arrays.stream(originatingSerializers)
+        final int len = originatingSerializers.length;
+
+        // Create array via raw type and cast to avoid generic array creation error
+        TypeSerializerSnapshot<?>[] snapshots =
+                (TypeSerializerSnapshot<?>[]) new TypeSerializerSnapshot[len];
+
+        for (int i = 0; i < len; i++) {
+            // Preserve the exact behavior: let any NullPointerException or other runtime
+            // exceptions from snapshotConfiguration propagate as in the original code.
+            snapshots[i] = originatingSerializers[i].snapshotConfiguration();
+        }
+
+        return snapshots;
     }
 
     // ------------------------------------------------------------------------
