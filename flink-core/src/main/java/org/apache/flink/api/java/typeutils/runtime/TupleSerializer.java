@@ -85,8 +85,11 @@ public class TupleSerializer<T extends Tuple> extends TupleSerializerBase<T> {
         try {
             T t = instantiateRaw();
 
-            for (int i = 0; i < arity; i++) {
-                t.setField(fields[i], i);
+            // Cache arity and fields reference to avoid repeated field access in the hot loop.
+            final int localArity = arity;
+            final Object[] localFields = fields;
+            for (int i = 0; i < localArity; i++) {
+                t.setField(localFields[i], i);
             }
 
             return t;
