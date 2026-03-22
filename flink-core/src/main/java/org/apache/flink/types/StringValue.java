@@ -403,9 +403,10 @@ public class StringValue
             return false;
         }
 
-        int sPos = 0;
-        while (sPos < sLen) {
-            if (thisChars[startIndex++] != prefix.charAt(sPos++)) {
+        // Use a simple indexed loop with local variables to minimize per-iteration overhead.
+        final int base = startIndex;
+        for (int i = 0; i < sLen; i++) {
+            if (thisChars[base + i] != prefix.charAt(i)) {
                 return false;
             }
         }
