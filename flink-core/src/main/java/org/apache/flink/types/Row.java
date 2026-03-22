@@ -283,20 +283,25 @@ public final class Row implements Serializable {
      * @return the field's content
      */
     public @Nullable Object getField(String name) {
-        if (fieldByName != null) {
-            return fieldByName.get(name);
-        } else if (positionByName != null) {
-            final Integer pos = positionByName.get(name);
+        final Map<String, Object> localFieldByName = this.fieldByName;
+        if (localFieldByName != null) {
+            return localFieldByName.get(name);
+        }
+
+        final LinkedHashMap<String, Integer> localPositionByName = this.positionByName;
+        if (localPositionByName != null) {
+            final Integer pos = localPositionByName.get(name);
             if (pos == null) {
                 throw new IllegalArgumentException(
-                        String.format("Unknown field name '%s' for mapping to a position.", name));
+                        "Unknown field name '" + name + "' for mapping to a position.");
             }
-            assert fieldByPosition != null;
-            return fieldByPosition[pos];
-        } else {
-            throw new IllegalArgumentException(
-                    "Accessing a field by name is not supported in position-based field mode.");
+            final Object[] localFieldByPosition = this.fieldByPosition;
+            assert localFieldByPosition != null;
+            return localFieldByPosition[pos];
         }
+
+        throw new IllegalArgumentException(
+                "Accessing a field by name is not supported in position-based field mode.");
     }
 
     /**
