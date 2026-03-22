@@ -28,6 +28,7 @@ public class DoubleParser extends FieldParser<Double> {
     private static final Double DOUBLE_INSTANCE = Double.valueOf(0.0);
 
     private double result;
+    private static final char NO_QUOTE = '\uffff';
 
     @Override
     public int parseField(
@@ -77,7 +78,7 @@ public class DoubleParser extends FieldParser<Double> {
      *     represents not a correct number.
      */
     public static final double parseField(byte[] bytes, int startPos, int length) {
-        return parseField(bytes, startPos, length, (char) 0xffff);
+        return parseField(bytes, startPos, length, NO_QUOTE);
     }
 
     /**
