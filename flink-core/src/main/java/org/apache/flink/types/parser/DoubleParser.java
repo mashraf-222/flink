@@ -37,15 +37,23 @@ public class DoubleParser extends FieldParser<Double> {
             return -1;
         }
 
-        if (endPos > startPos
-                && (Character.isWhitespace(bytes[startPos])
-                        || Character.isWhitespace(bytes[(endPos - 1)]))) {
+        final int len = endPos - startPos;
+
+        // Fast-path: empty field -> same outcome as Double.parseDouble("") which throws NFE
+        if (len == 0) {
+            setErrorState(ParseErrorState.NUMERIC_VALUE_FORMAT_ERROR);
+            return -1;
+        }
+
+        // Only check ASCII whitespace characters; this preserves the original behavior
+        // for single-byte characters and avoids widening/Character API overhead.
+        if (isAsciiWhitespace(bytes[startPos]) || isAsciiWhitespace(bytes[endPos - 1])) {
             setErrorState(ParseErrorState.NUMERIC_VALUE_ILLEGAL_CHARACTER);
             return -1;
         }
 
         String str =
-                new String(bytes, startPos, endPos - startPos, ConfigConstants.DEFAULT_CHARSET);
+                new String(bytes, startPos, len, ConfigConstants.DEFAULT_CHARSET);
         try {
             this.result = Double.parseDouble(str);
             return (endPos == limit) ? limit : endPos + delimiter.length;
@@ -105,4 +113,11 @@ public class DoubleParser extends FieldParser<Double> {
         final String str = new String(bytes, startPos, limitedLen, ConfigConstants.DEFAULT_CHARSET);
         return Double.parseDouble(str);
     }
+
+    private static boolean isAsciiWhitespace(byte b) {
+        // whitespace characters covered: space(32), tab(9), linefeed(10), vertical tab(11),
+        // form feed(12), carriage return(13)
+        return b == 0x20 || b == 0x09 || b == 0x0A || b == 0x0B || b == 0x0C || b == 0x0D;
+    }
+
 }
