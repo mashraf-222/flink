@@ -146,9 +146,9 @@ public abstract class AbstractParameterTool extends ExecutionConfig.GlobalJobPar
 
     /** Returns the Float value for the given key. The method fails if the key does not exist. */
     public float getFloat(String key) {
-        addToDefaults(key, null);
+        // addToDefaults is already invoked inside getRequired(...)
         String value = getRequired(key);
-        return Float.valueOf(value);
+        return Float.parseFloat(value);
     }
 
     /**
