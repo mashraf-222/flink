@@ -596,19 +596,13 @@ public class StringValue
 
         if (obj instanceof StringValue) {
             final StringValue other = (StringValue) obj;
-            int len = this.len;
+            final int len = this.len;
 
             if (len == other.len) {
                 final char[] tc = this.value;
                 final char[] oc = other.value;
-                int i = 0, j = 0;
-
-                while (len-- != 0) {
-                    if (tc[i++] != oc[j++]) {
-                        return false;
-                    }
-                }
-                return true;
+                // Use Arrays.mismatch with explicit ranges to leverage JVM/native optimizations
+                return java.util.Arrays.mismatch(tc, 0, len, oc, 0, len) == -1;
             }
         }
         return false;
