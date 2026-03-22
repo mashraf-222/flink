@@ -402,6 +402,34 @@ public final class Row implements Serializable {
             return false;
         }
         final Row other = (Row) o;
+
+        // Fast path: identical internal structures (including kind) -> equal
+        if (fieldByPosition == other.fieldByPosition
+                && fieldByName == other.fieldByName
+                && positionByName == other.positionByName
+                && kind == other.kind) {
+            return true;
+        }
+
+        // Quick, cheap kind comparison (null-safe)
+        if (!java.util.Objects.equals(kind, other.kind)) {
+            return false;
+        }
+
+        // Fast path for two position-based rows: compare array lengths and contents.
+        if (fieldByPosition != null && other.fieldByPosition != null) {
+            if (fieldByPosition.length != other.fieldByPosition.length) {
+                return false;
+            }
+            return Arrays.deepEquals(fieldByPosition, other.fieldByPosition);
+        }
+
+        // Fast path for two name-based rows: rely on Map.equals for structural equality.
+        if (fieldByName != null && other.fieldByName != null) {
+            return fieldByName.equals(other.fieldByName);
+        }
+
+        // Fallback: use the general, correct (but heavier) comparator.
         return deepEqualsRow(
                 kind,
                 fieldByPosition,
