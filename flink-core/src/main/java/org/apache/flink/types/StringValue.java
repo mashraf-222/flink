@@ -352,34 +352,41 @@ public class StringValue
             throw new IllegalArgumentException("Cannot find empty string.");
         }
 
-        int pPos = start;
-
+        final char[] v = this.value;
         final char first = str.charAt(0);
 
+        int pPos = start;
+
+        // Main loop: find next occurrence of the first character, then compare the subsequent characters.
         while (pPos < pLen) {
-            if (first == this.value[pPos++]) {
-                // matching first character
-                final int fallBackPosition = pPos;
-                int sPos = 1;
-                boolean found = true;
+            // fast-skip to next potential match of first character
+            while (pPos < pLen && v[pPos] != first) {
+                pPos++;
+            }
+            if (pPos >= pLen) {
+                break;
+            }
 
-                while (sPos < sLen) {
-                    if (pPos >= pLen) {
-                        // no more characters in string value
-                        pPos = fallBackPosition;
-                        found = false;
-                        break;
-                    }
+            // Check remaining length quickly
+            int remaining = pLen - pPos;
+            if (sLen > remaining) {
+                return -1;
+            }
 
-                    if (str.charAt(sPos++) != this.value[pPos++]) {
-                        pPos = fallBackPosition;
-                        found = false;
-                        break;
-                    }
+            // Compare the rest of the pattern
+            int i = 1;
+            int base = pPos;
+            for (; i < sLen; i++) {
+                if (v[base + i] != str.charAt(i)) {
+                    // mismatch -> continue search after this position
+                    pPos = base + 1;
+                    break;
                 }
-                if (found) {
-                    return fallBackPosition - 1;
-                }
+            }
+
+            if (i == sLen) {
+                // full match
+                return base;
             }
         }
         return -1;
