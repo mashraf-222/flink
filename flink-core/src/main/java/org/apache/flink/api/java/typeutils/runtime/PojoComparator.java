@@ -246,17 +246,24 @@ public final class PojoComparator<T> extends CompositeTypeComparator<T>
     public int compareToReference(TypeComparator<T> referencedComparator) {
         PojoComparator<T> other = (PojoComparator<T>) referencedComparator;
 
+        // Cache frequently accessed fields to local variables to avoid repeated
+        // field dereferences in the hot loop.
+        final Field[] localKeyFields = this.keyFields;
+        final TypeComparator<Object>[] localComparators = this.comparators;
+        final TypeComparator<Object>[] otherComparators = other.comparators;
+        final int len = localKeyFields.length;
+
         int i = 0;
         try {
-            for (; i < this.keyFields.length; i++) {
-                int cmp = this.comparators[i].compareToReference(other.comparators[i]);
+            for (; i < len; i++) {
+                int cmp = localComparators[i].compareToReference(otherComparators[i]);
                 if (cmp != 0) {
                     return cmp;
                 }
             }
             return 0;
         } catch (NullPointerException npex) {
-            throw new NullKeyFieldException(this.keyFields[i].toString());
+            throw new NullKeyFieldException(localKeyFields[i].toString());
         }
     }
 
