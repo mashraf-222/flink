@@ -40,14 +40,20 @@ public class IntPrimitiveArrayComparator extends PrimitiveArrayComparator<int[],
 
     @Override
     public int compare(int[] first, int[] second) {
-        for (int x = 0; x < min(first.length, second.length); x++) {
+        // Cache values used in the loop to avoid repeated field access and method calls.
+        final int firstLen = first.length;
+        final int secondLen = second.length;
+        final int limit = firstLen < secondLen ? firstLen : secondLen;
+        final boolean asc = ascending;
+
+        for (int x = 0; x < limit; x++) {
             int cmp = first[x] - second[x];
             if (cmp != 0) {
-                return ascending ? cmp : -cmp;
+                return asc ? cmp : -cmp;
             }
         }
-        int cmp = first.length - second.length;
-        return ascending ? cmp : -cmp;
+        int cmp = firstLen - secondLen;
+        return asc ? cmp : -cmp;
     }
 
     @Override
