@@ -37,6 +37,7 @@ public final class BooleanPrimitiveArraySerializer extends TypeSerializerSinglet
 
     public static final BooleanPrimitiveArraySerializer INSTANCE =
             new BooleanPrimitiveArraySerializer();
+    private static final ThreadLocal<byte[]> BUFFER = new ThreadLocal<>();
 
     @Override
     public boolean isImmutableType() {
@@ -118,4 +119,19 @@ public final class BooleanPrimitiveArraySerializer extends TypeSerializerSinglet
             super(() -> INSTANCE);
         }
     }
+
+    @Override
+    public BooleanPrimitiveArraySerializer duplicate() {
+        return INSTANCE;
+    }
+
+    private static byte[] ensureBuffer(int minSize) {
+        byte[] buf = BUFFER.get();
+        if (buf == null || buf.length < minSize) {
+            buf = new byte[minSize];
+            BUFFER.set(buf);
+        }
+        return buf;
+    }
+
 }
