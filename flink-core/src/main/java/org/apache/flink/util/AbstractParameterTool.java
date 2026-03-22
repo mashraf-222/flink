@@ -169,9 +169,9 @@ public abstract class AbstractParameterTool extends ExecutionConfig.GlobalJobPar
 
     /** Returns the Double value for the given key. The method fails if the key does not exist. */
     public double getDouble(String key) {
-        addToDefaults(key, null);
+        // addToDefaults is invoked by getRequired, so avoid redundant call here for performance
         String value = getRequired(key);
-        return Double.valueOf(value);
+        return Double.parseDouble(value);
     }
 
     /**
