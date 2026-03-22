@@ -298,7 +298,28 @@ public class StringValue
      *     than the length.
      */
     public StringValue substring(int start, int end) {
-        return new StringValue(this, start, end - start);
+        // Use a local copy of len to avoid repeated field access in hot paths.
+        int currentLen = this.len;
+
+        // Bounds checks matching expected behavior.
+        if (start < 0 || end > currentLen || start > end) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        int subLen = end - start;
+
+        // Fast path: empty substring -> return an empty StringValue without copying.
+        if (subLen == 0) {
+            return new StringValue();
+        }
+
+        // Fast path: whole string requested -> use copy constructor which may be cheaper than substring path.
+        if (start == 0 && subLen == currentLen) {
+            return new StringValue(this);
+        }
+
+        // General case: delegate to existing substring constructor.
+        return new StringValue(this, start, subLen);
     }
 
     /**
