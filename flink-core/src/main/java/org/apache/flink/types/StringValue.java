@@ -695,7 +695,21 @@ public class StringValue
 
     @Override
     public StringValue copy() {
-        return new StringValue(this);
+        // Fast deep copy: allocate exactly len chars and copy used portion.
+        StringValue v = new StringValue();
+        if (this.len == 0) {
+            // keep EMPTY_STRING shared for empty value to avoid allocation
+            v.value = EMPTY_STRING;
+            v.len = 0;
+            v.hashCode = this.hashCode;
+            return v;
+        }
+        char[] newArr = new char[this.len];
+        System.arraycopy(this.value, 0, newArr, 0, this.len);
+        v.value = newArr;
+        v.len = this.len;
+        v.hashCode = this.hashCode;
+        return v;
     }
 
     @Override
