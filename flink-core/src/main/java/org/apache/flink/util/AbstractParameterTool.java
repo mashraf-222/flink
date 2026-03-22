@@ -192,9 +192,9 @@ public abstract class AbstractParameterTool extends ExecutionConfig.GlobalJobPar
 
     /** Returns the Boolean value for the given key. The method fails if the key does not exist. */
     public boolean getBoolean(String key) {
-        addToDefaults(key, null);
+        // Removed redundant addToDefaults call: getRequired already adds to defaults.
         String value = getRequired(key);
-        return Boolean.valueOf(value);
+        return Boolean.parseBoolean(value);
     }
 
     /**
