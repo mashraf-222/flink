@@ -99,4 +99,11 @@ public final class BooleanValueSerializer extends TypeSerializerSingleton<Boolea
             super(() -> INSTANCE);
         }
     }
+
+    @Override
+    public BooleanValueSerializer duplicate() {
+        // stateless and singleton
+        return INSTANCE;
+    }
+
 }
